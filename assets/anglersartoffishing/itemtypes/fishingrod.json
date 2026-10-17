@@ -11,9 +11,9 @@
     "*-master": 800
   },
   "attributesByType": {
-    "*-crude": { "rodStrength": 1, "reelSpeed": 1.0, "forgiveness": 0.30 },
-    "*-sturdy": { "rodStrength": 2, "reelSpeed": 1.15, "forgiveness": 0.45 },
-    "*-master": { "rodStrength": 3, "reelSpeed": 1.30, "forgiveness": 0.60 }
+    "*-crude": { "rodStrength": 1, "reelSpeed": 1.05, "forgiveness": 1.25 },
+    "*-sturdy": { "rodStrength": 2, "reelSpeed": 1.20, "forgiveness": 1.85 },
+    "*-master": { "rodStrength": 3, "reelSpeed": 1.40, "forgiveness": 2.60 }
   },
   "texture": { "base": "item/rod-{tier}" },
   "creativeinventory": { "general": [ "*" ], "items": [ "*" ] },

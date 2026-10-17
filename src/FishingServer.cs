@@ -15,8 +15,8 @@ namespace AnglersArtOfFishing
     {
         const float CastMinDist = 2.5f;
         const float CastMaxDist = 16f;
-        const float BiteWindowSeconds = 1.4f;
-        const long BiteGraceMs = 350;
+        const float BiteWindowSeconds = 2.2f;
+        const long BiteGraceMs = 500;
         const float MaxLineDistance = 26f;
         const long MaxFightMs = 5 * 60 * 1000;
 

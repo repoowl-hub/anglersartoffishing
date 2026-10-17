@@ -53,17 +53,17 @@ namespace AnglersArtOfFishing
     public class FightSimulation
     {
         // ---- Tunables (feel) ----
-        public const float SweetMin = 0.40f;
-        public const float SweetMax = 0.72f;
-        public const float DangerStart = 0.88f;
+        public const float SweetMin = 0.35f;
+        public const float SweetMax = 0.78f;
+        public const float DangerStart = 0.92f;
 
         const float BaseTension = 0.10f;
-        const float ReelTension = 0.30f;
-        const float BaseReelSpeed = 0.085f;       // distance units / second while reeling calmly
-        const float SlackThreshold = 0.16f;
-        const float SlackEscapeSeconds = 4.5f;
-        const float WindupSeconds = 0.75f;
-        const float TiredSeconds = 6.5f;
+        const float ReelTension = 0.28f;
+        const float BaseReelSpeed = 0.11f;        // distance units / second while reeling calmly
+        const float SlackThreshold = 0.12f;
+        const float SlackEscapeSeconds = 6.5f;
+        const float WindupSeconds = 1.15f;
+        const float TiredSeconds = 7.0f;
         const float LandedDistance = 0.02f;
 
         readonly FightParams p;
@@ -167,10 +167,10 @@ namespace AnglersArtOfFishing
                     SetBehaviour(FishBehaviour.Windup, WindupSeconds);
                     break;
                 case FishBehaviour.Windup:
-                    SetBehaviour(FishBehaviour.Dash, 1.3f + (float)rand.NextDouble() * (0.7f + p.Power));
+                    SetBehaviour(FishBehaviour.Dash, 0.9f + (float)rand.NextDouble() * (0.5f + 0.4f * p.Power));
                     break;
                 case FishBehaviour.Dash:
-                    SetBehaviour(FishBehaviour.Recover, 0.9f);
+                    SetBehaviour(FishBehaviour.Recover, 1.0f);
                     break;
                 case FishBehaviour.Recover:
                     SetBehaviour(FishBehaviour.Swim, CalmDuration());
@@ -178,7 +178,7 @@ namespace AnglersArtOfFishing
                 case FishBehaviour.Tired:
                     // Second wind: the fish gets some stamina back but you're closer than before
                     SecondWinds++;
-                    Stamina = Math.Max(0.30f, 0.45f - 0.08f * SecondWinds);
+                    Stamina = Math.Max(0.25f, 0.38f - 0.08f * SecondWinds);
                     SetBehaviour(FishBehaviour.Swim, CalmDuration());
                     break;
             }
@@ -187,7 +187,7 @@ namespace AnglersArtOfFishing
         float CalmDuration()
         {
             float aggr = Math.Clamp(p.Aggression, 0.05f, 1f);
-            float baseT = 3.6f - 2.2f * aggr;                 // 1.4s .. 3.4s
+            float baseT = 4.2f - 1.8f * aggr;                 // 2.4s .. 4.2s
             return baseT * (0.8f + 0.4f * (float)rand.NextDouble());
         }
 
@@ -235,7 +235,7 @@ namespace AnglersArtOfFishing
             // Releasing the reel lets line slip: only part of the pull reaches the rod.
             float target = BaseTension + pull * (Reeling ? 1f : 0.5f) + (Reeling ? ReelTension * tired : 0f);
 
-            float k = target > Tension ? 9f : 7f;
+            float k = target > Tension ? 8f : 12f;
             Tension += (target - Tension) * (1f - MathF.Exp(-k * dt));
             Tension = Math.Clamp(Tension, 0f, 1.05f);
         }
@@ -245,17 +245,17 @@ namespace AnglersArtOfFishing
             if (Behaviour == FishBehaviour.Tired) return;
 
             float drain = 0f;
-            if (Tension >= SweetMin && Tension <= SweetMax + 0.1f) drain = 1f;
-            else if (Tension > 0.25f && Tension < SweetMin) drain = 0.3f;
+            if (Tension >= SweetMin && Tension <= SweetMax + 0.08f) drain = 1.2f;
+            else if (Tension > 0.20f && Tension < SweetMin) drain = 0.4f;
 
             // Skilful counter-steering during a dash wears the fish out faster
-            if (CounterSteering) drain += 0.5f;
+            if (CounterSteering) drain += 0.8f;
 
             float perSecond = 1f / Math.Max(2f, p.StaminaSeconds);
             Stamina -= drain * perSecond * dt;
 
             // Slack line lets the fish catch its breath
-            if (Tension < SlackThreshold) Stamina += 0.04f * dt;
+            if (Tension < SlackThreshold) Stamina += 0.03f * dt;
 
             Stamina = Math.Clamp(Stamina, 0f, 1f);
         }
@@ -284,12 +284,12 @@ namespace AnglersArtOfFishing
             // The fish pulls line out while dashing - harder if you let it run (not reeling) than the reel could hold.
             if (Behaviour == FishBehaviour.Dash)
             {
-                float drag = 0.050f + 0.065f * p.Power;
+                float drag = 0.025f + 0.035f * p.Power;
                 change += drag * (Reeling ? 0.35f : 1f) * PullNow;
             }
 
             // Slack: fish gains ground
-            if (Tension < SlackThreshold && Behaviour != FishBehaviour.Tired) change += 0.03f;
+            if (Tension < SlackThreshold && Behaviour != FishBehaviour.Tired) change += 0.02f;
 
             Distance = Math.Clamp(Distance + change * dt, 0f, 1.15f);
         }
@@ -300,11 +300,11 @@ namespace AnglersArtOfFishing
             if (Tension > DangerStart)
             {
                 float over = (Tension - DangerStart) / (1.0f - DangerStart);
-                DangerTimer += dt * Math.Clamp(0.6f + over, 0.6f, 1.6f);
+                DangerTimer += dt * Math.Clamp(0.5f + over * 0.8f, 0.5f, 1.3f);
             }
             else
             {
-                DangerTimer = Math.Max(0f, DangerTimer - dt * 1.8f);
+                DangerTimer = Math.Max(0f, DangerTimer - dt * 2.5f);
             }
 
             if (DangerTimer >= p.Forgiveness)

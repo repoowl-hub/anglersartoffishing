@@ -1,6 +1,7 @@
 {
   "code": "bait",
   "maxstacksize": 32,
+  "storageFlags": 257,
   "variantgroups": [
     { "code": "type", "states": [ "worm", "grain", "fishscrap", "spinner" ] }
   ],

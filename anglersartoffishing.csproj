@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <RootNamespace>AnglersArtOfFishing</RootNamespace>
-    <VINTAGE_STORY Condition="'$(VINTAGE_STORY)' == ''">$(APPDATA)\VSLGameVersions\1.22.6</VINTAGE_STORY>
+    <VINTAGE_STORY Condition="'$(VINTAGE_STORY)' == ''">$(APPDATA)\VSLGameVersions\1.22.7</VINTAGE_STORY>
   </PropertyGroup>
 
   <ItemGroup>

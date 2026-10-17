@@ -1,0 +1,22 @@
+{
+  "code": "fishingrod",
+  "class": "AAFItemFishingRod",
+  "maxstacksize": 1,
+  "variantgroups": [
+    { "code": "tier", "states": [ "crude", "sturdy", "master" ] }
+  ],
+  "durabilityByType": {
+    "*-crude": 120,
+    "*-sturdy": 320,
+    "*-master": 800
+  },
+  "attributesByType": {
+    "*-crude": { "rodStrength": 1, "reelSpeed": 1.0, "forgiveness": 0.30 },
+    "*-sturdy": { "rodStrength": 2, "reelSpeed": 1.15, "forgiveness": 0.45 },
+    "*-master": { "rodStrength": 3, "reelSpeed": 1.30, "forgiveness": 0.60 }
+  },
+  "texture": { "base": "item/rod-{tier}" },
+  "creativeinventory": { "general": [ "*" ], "items": [ "*" ] },
+  "guiTransform": { "rotation": { "x": 0, "y": 0, "z": 0 }, "scale": 1.1 },
+  "tpHandTransform": { "translation": { "x": -0.9, "y": -0.2, "z": -0.6 }, "rotation": { "x": 0, "y": 0, "z": -30 }, "scale": 1.3 }
+}

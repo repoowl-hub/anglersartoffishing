@@ -1,0 +1,50 @@
+[
+  {
+    "Code": "minnow", "Name": "Minnow", "MinRodStrength": 1, "Weight": 3.0,
+    "Baits": { "grain": 3, "worm": 1.5 },
+    "MinSizeCm": 6, "MaxSizeCm": 12, "Power": 0.15, "StaminaSeconds": 7, "Aggression": 0.25,
+    "MinFightSeconds": 4, "BaseQuantity": 1
+  },
+  {
+    "Code": "perch", "Name": "Perch", "MinRodStrength": 1, "Weight": 2.5,
+    "Baits": { "worm": 3, "grain": 1, "fishscrap": 1 },
+    "MinSizeCm": 15, "MaxSizeCm": 40, "Power": 0.30, "StaminaSeconds": 10, "Aggression": 0.40,
+    "MinFightSeconds": 6, "BaseQuantity": 1
+  },
+  {
+    "Code": "carp", "Name": "Carp", "MinRodStrength": 2, "Weight": 2.0,
+    "Baits": { "grain": 3, "worm": 1 },
+    "MinSizeCm": 30, "MaxSizeCm": 80, "Power": 0.45, "StaminaSeconds": 15, "Aggression": 0.30,
+    "MinFightSeconds": 9, "BaseQuantity": 2
+  },
+  {
+    "Code": "trout", "Name": "Trout", "MinRodStrength": 2, "Weight": 2.0,
+    "Baits": { "worm": 2, "spinner": 3 },
+    "MinSizeCm": 25, "MaxSizeCm": 70, "Power": 0.50, "StaminaSeconds": 13, "Aggression": 0.65,
+    "MinFightSeconds": 8, "BaseQuantity": 2
+  },
+  {
+    "Code": "pike", "Name": "Northern Pike", "MinRodStrength": 2, "Weight": 1.2,
+    "Baits": { "fishscrap": 3, "spinner": 2 },
+    "MinSizeCm": 45, "MaxSizeCm": 110, "Power": 0.62, "StaminaSeconds": 16, "Aggression": 0.80,
+    "MinFightSeconds": 10, "BaseQuantity": 3
+  },
+  {
+    "Code": "catfish", "Name": "Catfish", "MinRodStrength": 3, "Weight": 1.0,
+    "Baits": { "fishscrap": 3, "worm": 1.5 },
+    "MinSizeCm": 60, "MaxSizeCm": 150, "Power": 0.72, "StaminaSeconds": 22, "Aggression": 0.45,
+    "MinFightSeconds": 14, "BaseQuantity": 4
+  },
+  {
+    "Code": "sturgeon", "Name": "Sturgeon", "MinRodStrength": 3, "Weight": 0.6,
+    "Baits": { "fishscrap": 2, "grain": 1 },
+    "MinSizeCm": 90, "MaxSizeCm": 220, "Power": 0.85, "StaminaSeconds": 28, "Aggression": 0.55,
+    "MinFightSeconds": 18, "BaseQuantity": 6
+  },
+  {
+    "Code": "taimen", "Name": "Great Taimen", "MinRodStrength": 3, "Weight": 0.4,
+    "Baits": { "spinner": 3, "fishscrap": 1 },
+    "MinSizeCm": 100, "MaxSizeCm": 200, "Power": 0.95, "StaminaSeconds": 26, "Aggression": 0.95,
+    "MinFightSeconds": 18, "BaseQuantity": 6
+  }
+]

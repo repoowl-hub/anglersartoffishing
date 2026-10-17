@@ -53,8 +53,7 @@ Flow: right-click water with bait in off-hand → server Waiting → Bite (clien
    that pairing, so test margin 0 vs margin 2).
 3. Polish feel: camera/FOV punch on Dash start (hook `BehaviourChanged`), sounds (find valid vanilla
    sound paths first), screen-edge red vignette in danger, smoother toast fade.
-4. Bobber entity or particle ripple that follows the bobber position and reacts to fight state;
-   rod hold/cast animation.
+4. [COMPLETED] In-world water animation: dynamic splashes, expanding surface foam wake, sub-surface fish body silhouette, underwater bubbles, and swim audio tracking the fish's 3D position in real-time as it swims, dashes, and reels into shore.
 5. Extra gating ideas: water type (fresh/salt), depth, time of day, size bias by bait/rod.
 6. Add a `.gitignore` (`bin/`, `obj/`) for this folder if missing.
 

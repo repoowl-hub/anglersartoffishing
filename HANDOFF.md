@@ -26,7 +26,7 @@ managing line tension to exhaust it, then land it. Fish species are gated by **b
 | `src/FightSimulation.cs` | Pure C# fight sim (no VS API). Tension, stamina, distance, fish behaviours (Swim/Windup/Dash/Recover/Tired), snap/slack/escape outcomes. All feel constants at the top. |
 | `src/FishingData.cs` | `FishSpecies` + `SpeciesRegistry` (loads `config/species.json`, `Roll()` filters by rod strength + bait), ProtoBuf packets `FishingStatePacket` (server→client) and `FishingActionPacket` (client→server). |
 | `src/FishingServer.cs` | Sessions per player: cast (water raycast), bait check, bite timer, bite window, starts fight, validates result (min fight time), gives catch, damages rod, consumes bait. |
-| `src/FishingClient.cs` | `IRenderer` (Ortho). Runs the sim every frame from input (RMB = reel, Left/Right/A/D = steer), draws HUD with 1x1 white texture + cached text textures, reports outcome to server. |
+| `src/FishingClient.cs` | `IRenderer` (Ortho). Runs the sim every frame from input (RMB = reel, Mouse move = tilt steer), draws HUD with 1x1 white texture + cached text textures, reports outcome to server. |
 | `src/ItemFishingRod.cs` | Item class `AAFItemFishingRod`; right-click forwards to server/client systems. |
 | `src/AnglersArtModSystem.cs` | Registers item class, loads species (server), creates `FishingServer`/`FishingClient`. |
 | `assets/anglersartoffishing/` | `itemtypes/fishingrod.json` (crude/sturdy/master, attrs `rodStrength`,`reelSpeed`,`forgiveness`), `itemtypes/bait.json` (worm/grain/fishscrap/spinner, attrs `baitType`,`biteSpeed`,`consumeChance`), `config/species.json`, `recipes/grid/fishing.json`, `lang/en.json`, generated icons in `textures/item/`. |
@@ -41,7 +41,7 @@ Flow: right-click water with bait in off-hand → server Waiting → Bite (clien
    `%APPDATA%\VintagestoryData\Logs\server-main.log` / `client-main.log` for missing-item warnings and fix.
 2. Items use flat sprite rendering (`"texture": {"base": ...}`, no shape). Confirm they load and show icons.
 3. HUD text alpha fade is not implemented (toast just disappears); Rect alpha works.
-4. A/D steering also strafes the player. Consider arrow-keys-only or locking movement during a fight.
+4. [FIXED] Player movement conflict: steering is now exclusively mouse tilting (consumes horizontal mouse movement and locks camera during fight).
 5. Balance has never been playtested. Constants in `FightSimulation.cs` are theoretical.
 
 ## Suggested next tasks (in order)

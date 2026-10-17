@@ -8,7 +8,7 @@
   "item-bait-spinner": "Spinner Lure",
 
   "rod-strength": "Rod strength: {0}",
-  "rod-help": "Hold bait in your off-hand. Right-click toward water to cast, right-click when you see '!' to hook. Hold right-click to reel, steer with Left/Right or A/D.",
+  "rod-help": "Hold bait in your off-hand. Right-click toward water to cast, right-click when you see '!' to hook. Hold right-click to reel, tilt mouse left/right to steer.",
 
   "fishing-nobait": "You need bait in your off-hand.",
   "fishing-nowater": "Aim at open water to cast.",
@@ -28,5 +28,5 @@
   "hud-recover": "Steady...",
   "hud-tired": "It's tiring - REEL!",
   "hud-slack": "Line is slack - reel!",
-  "hud-controls": "Hold RMB: reel   |   Left/Right or A/D: steer against the fish"
+  "hud-controls": "Hold RMB: reel   |   Move Mouse: tilt rod against the fish"
 }

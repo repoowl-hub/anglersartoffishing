@@ -34,6 +34,11 @@ namespace AnglersArtOfFishing
         float time;
         float flash; // 0..1 white flash on state changes
 
+        // Mouse steering
+        const float MouseSteerSensitivity = 0.005f; // ~200px horizontal sweep = full +/-1 tilt
+        const float CenterReturnSpeed = 0.35f;       // gradual return-to-center when mouse is stationary
+        float steerTarget;
+
         // Rendering resources
         LoadedTexture white;
         readonly TextTextureUtil textUtil;
@@ -61,6 +66,7 @@ namespace AnglersArtOfFishing
             }
 
             api.Event.RegisterRenderer(this, EnumRenderStage.Ortho, "anglersartoffishing-hud");
+            api.Event.MouseMove += OnMouseMove;
         }
 
         // ------------------------------------------------------------------ network / input
@@ -91,6 +97,7 @@ namespace AnglersArtOfFishing
                     break;
                 case FishingPhase.Fight:
                     speciesName = p.SpeciesName;
+                    steerTarget = 0f;
                     sim = new FightSimulation(new FightParams
                     {
                         Power = p.Power,
@@ -122,6 +129,15 @@ namespace AnglersArtOfFishing
             }
         }
 
+        void OnMouseMove(MouseEvent e)
+        {
+            if (phase == FishingPhase.Fight && sim != null && capi.Input.MouseGrabbed)
+            {
+                steerTarget = Math.Clamp(steerTarget + e.DeltaX * MouseSteerSensitivity, -1f, 1f);
+                e.Handled = true;
+            }
+        }
+
         void ShowToast(string text, bool good)
         {
             toast = text;
@@ -144,12 +160,14 @@ namespace AnglersArtOfFishing
             else if (phase == FishingPhase.Fight && sim != null)
             {
                 bool reel = capi.Input.InWorldMouseButton.Right;
-                var keys = capi.Input.KeyboardKeyStateRaw;
-                float steer = 0;
-                if (keys[(int)GlKeys.Left] || keys[(int)GlKeys.A]) steer -= 1;
-                if (keys[(int)GlKeys.Right] || keys[(int)GlKeys.D]) steer += 1;
 
-                sim.Update(dt, reel, steer);
+                // Passive return-to-center drift so player never runs out of mousepad space
+                if (MathF.Abs(steerTarget) > 0.001f)
+                {
+                    steerTarget -= MathF.Sign(steerTarget) * Math.Min(MathF.Abs(steerTarget), CenterReturnSpeed * dt);
+                }
+
+                sim.Update(dt, reel, steerTarget);
 
                 if (sim.Finished && reported == FightOutcome.None)
                 {
@@ -338,6 +356,7 @@ namespace AnglersArtOfFishing
 
         public void Dispose()
         {
+            capi.Event.MouseMove -= OnMouseMove;
             capi.Event.UnregisterRenderer(this, EnumRenderStage.Ortho);
             ClearTextCache();
             white?.Dispose();

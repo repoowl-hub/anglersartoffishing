@@ -39,6 +39,17 @@ namespace AnglersArtOfFishing
         const float CenterReturnSpeed = 0.35f;       // gradual return-to-center when mouse is stationary
         float steerTarget;
 
+        // In-world water animation
+        Vec3d baseBobber;
+        Vec3d castOrigin;
+        Vec3d currentFishPos;
+        float swimPhase;
+        float splashTimer;
+        float rippleTimer;
+        float shadowTimer;
+        float soundTimer;
+        float biteSplashTimer;
+
         // Rendering resources
         LoadedTexture white;
         readonly TextTextureUtil textUtil;
@@ -75,6 +86,11 @@ namespace AnglersArtOfFishing
         {
             var newPhase = (FishingPhase)p.Phase;
 
+            if (p.BobberX != 0 || p.BobberY != 0 || p.BobberZ != 0)
+            {
+                baseBobber = new Vec3d(p.BobberX, p.BobberY, p.BobberZ);
+            }
+
             if (!string.IsNullOrEmpty(p.Message))
             {
                 bool good = p.Message.EndsWith("caught");
@@ -85,15 +101,18 @@ namespace AnglersArtOfFishing
             {
                 case FishingPhase.Idle:
                     sim = null;
+                    ResetFishVisuals();
                     break;
                 case FishingPhase.Waiting:
                     sim = null;
+                    ResetFishVisuals();
                     break;
                 case FishingPhase.Bite:
                     biteWindow = Math.Max(0.5f, p.BiteWindow);
                     biteLeft = biteWindow;
                     hookSent = false;
                     flash = 1f;
+                    biteSplashTimer = 0f;
                     break;
                 case FishingPhase.Fight:
                     speciesName = p.SpeciesName;
@@ -114,6 +133,7 @@ namespace AnglersArtOfFishing
                     dispStamina = 1f;
                     dispDistance = sim.Distance;
                     flash = 1f;
+                    InitFightVisuals();
                     break;
             }
             phase = newPhase;
@@ -156,6 +176,7 @@ namespace AnglersArtOfFishing
             if (phase == FishingPhase.Bite)
             {
                 biteLeft -= dt;
+                UpdateBiteEffects(dt);
             }
             else if (phase == FishingPhase.Fight && sim != null)
             {
@@ -168,6 +189,7 @@ namespace AnglersArtOfFishing
                 }
 
                 sim.Update(dt, reel, steerTarget);
+                UpdateFightWaterEffects(dt);
 
                 if (sim.Finished && reported == FightOutcome.None)
                 {
@@ -178,6 +200,7 @@ namespace AnglersArtOfFishing
                         Outcome = sim.Outcome == FightOutcome.Landed ? 2 : sim.Outcome == FightOutcome.LineSnapped ? 1 : 0,
                         FightSeconds = sim.Elapsed
                     });
+                    SpawnOutcomeEffects(sim.Outcome);
                     phase = FishingPhase.Idle; // server answer with the final message follows
                 }
             }
@@ -354,10 +377,345 @@ namespace AnglersArtOfFishing
             textCache.Clear();
         }
 
+        // ------------------------------------------------------------------ water animation
+
+        void InitFightVisuals()
+        {
+            var player = capi.World.Player?.Entity;
+            if (player != null)
+            {
+                castOrigin = player.Pos.XYZ.Clone();
+            }
+            if (baseBobber != null)
+            {
+                currentFishPos = baseBobber.Clone();
+            }
+            swimPhase = 0f;
+            splashTimer = 0f;
+            rippleTimer = 0f;
+            shadowTimer = 0f;
+            soundTimer = 0f;
+        }
+
+        void ResetFishVisuals()
+        {
+            currentFishPos = null;
+            castOrigin = null;
+        }
+
+        void UpdateBiteEffects(float dt)
+        {
+            if (baseBobber == null) return;
+            biteSplashTimer += dt;
+            if (biteSplashTimer >= 0.16f)
+            {
+                biteSplashTimer = 0f;
+
+                // Periodic bite ripple expanding at the bobber
+                var ripple = new SimpleParticleProperties(
+                    1f, 2f,
+                    ColorUtil.ToRgba(160, 220, 240, 255),
+                    new Vec3d(baseBobber.X - 0.22, baseBobber.Y + 0.02, baseBobber.Z - 0.22),
+                    new Vec3d(baseBobber.X + 0.22, baseBobber.Y + 0.04, baseBobber.Z + 0.22),
+                    new Vec3f(-0.08f, 0.01f, -0.08f),
+                    new Vec3f(0.08f, 0.03f, 0.08f),
+                    0.55f, 0f, 0.15f, 0.35f, EnumParticleModel.Quad
+                );
+                ripple.ShouldSwimOnLiquid = true;
+                ripple.OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, -200f);
+                ripple.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.28f);
+                capi.World.SpawnParticles(ripple);
+
+                // Small sharp tug splash
+                var splash = new SimpleParticleProperties(
+                    2f, 4f,
+                    ColorUtil.ToRgba(210, 230, 250, 255),
+                    new Vec3d(baseBobber.X - 0.1, baseBobber.Y + 0.05, baseBobber.Z - 0.1),
+                    new Vec3d(baseBobber.X + 0.1, baseBobber.Y + 0.1, baseBobber.Z + 0.1),
+                    new Vec3f(-0.5f, 0.8f, -0.5f),
+                    new Vec3f(0.5f, 1.8f, 0.5f),
+                    0.45f, 1.0f, 0.08f, 0.18f, EnumParticleModel.Quad
+                );
+                splash.ShouldDieInLiquid = true;
+                capi.World.SpawnParticles(splash);
+            }
+        }
+
+        void UpdateFightWaterEffects(float dt)
+        {
+            if (baseBobber == null || sim == null) return;
+            var player = capi.World.Player?.Entity;
+            if (player == null) return;
+
+            if (castOrigin == null)
+            {
+                castOrigin = player.Pos.XYZ.Clone();
+            }
+            else
+            {
+                // Smoothly drift cast origin towards player so line tracks reeling into player's hands
+                castOrigin.X += (player.Pos.X - castOrigin.X) * Math.Min(1f, 3f * dt);
+                castOrigin.Z += (player.Pos.Z - castOrigin.Z) * Math.Min(1f, 3f * dt);
+            }
+
+            double dx = baseBobber.X - castOrigin.X;
+            double dz = baseBobber.Z - castOrigin.Z;
+            double castDist = Math.Sqrt(dx * dx + dz * dz);
+            if (castDist < 0.5) castDist = 0.5;
+
+            double fwdX = dx / castDist;
+            double fwdZ = dz / castDist;
+            double rightX = -fwdZ;
+            double rightZ = fwdX;
+
+            // Minimum distance from player when fully reeled in
+            double minDist = Math.Min(1.6, castDist * 0.25);
+            // sim.Distance: 1.0 = at baseBobber, 0.0 = landed at minDist
+            double targetDist = minDist + (castDist - minDist) * Math.Clamp(sim.Distance, 0f, 1f);
+
+            // Swimming animation rate depends on fish state
+            float swimSpeed = sim.Behaviour switch
+            {
+                FishBehaviour.Dash => 22f,
+                FishBehaviour.Windup => 32f,
+                FishBehaviour.Tired => 4.5f,
+                FishBehaviour.Recover => 5.5f,
+                _ => 8.5f
+            };
+            swimPhase += dt * swimSpeed;
+
+            // Forward/back darting surge
+            double surge = sim.Behaviour == FishBehaviour.Dash
+                ? MathF.Sin(swimPhase * 0.5f) * 0.45
+                : MathF.Sin(swimPhase * 0.5f) * 0.22;
+
+            // Lateral excursion spread (how far to left and right the fish swims)
+            double maxLateral = Math.Clamp(castDist * 0.4, 2.0, 4.8);
+            double lateralBase = sim.FishLateral * maxLateral;
+
+            // S-curve tail undulation
+            double lateralWiggle = sim.Behaviour switch
+            {
+                FishBehaviour.Dash => MathF.Sin(swimPhase) * 0.55,
+                FishBehaviour.Windup => MathF.Sin(swimPhase) * 0.15, // rapid nervous vibration
+                FishBehaviour.Tired => MathF.Sin(swimPhase) * 0.20,
+                _ => MathF.Sin(swimPhase) * 0.38
+            };
+
+            double targetLateral = lateralBase + lateralWiggle;
+
+            // World coordinates on water surface
+            double targetX = castOrigin.X + fwdX * (targetDist + surge) + rightX * targetLateral;
+            double targetY = baseBobber.Y;
+            double targetZ = castOrigin.Z + fwdZ * (targetDist + surge) + rightZ * targetLateral;
+
+            if (currentFishPos == null)
+            {
+                currentFishPos = new Vec3d(targetX, targetY, targetZ);
+            }
+            else
+            {
+                float followRate = sim.Behaviour == FishBehaviour.Dash ? 20f : 12f;
+                currentFishPos.X += (targetX - currentFishPos.X) * (1f - MathF.Exp(-followRate * dt));
+                currentFishPos.Y = targetY;
+                currentFishPos.Z += (targetZ - currentFishPos.Z) * (1f - MathF.Exp(-followRate * dt));
+            }
+
+            double fx = currentFishPos.X;
+            double fy = currentFishPos.Y;
+            double fz = currentFishPos.Z;
+
+            // 1. Water Wake & Expanding Surface Foam (continuous trail behind moving fish)
+            rippleTimer += dt;
+            if (rippleTimer >= 0.045f)
+            {
+                rippleTimer = 0f;
+                var foam = new SimpleParticleProperties(
+                    1f, 2f,
+                    ColorUtil.ToRgba(175, 225, 242, 255),
+                    new Vec3d(fx - 0.22, fy + 0.02, fz - 0.22),
+                    new Vec3d(fx + 0.22, fy + 0.04, fz + 0.22),
+                    new Vec3f(-0.1f, 0.01f, -0.1f),
+                    new Vec3f(0.1f, 0.03f, 0.1f),
+                    0.65f, 0f, 0.18f, 0.36f, EnumParticleModel.Quad
+                );
+                foam.ShouldSwimOnLiquid = true;
+                foam.OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, -220f);
+                foam.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.32f);
+                capi.World.SpawnParticles(foam);
+            }
+
+            // 2. Sub-surface Fish Silhouette (dark aquatic shadow following fish body)
+            shadowTimer += dt;
+            if (shadowTimer >= 0.08f)
+            {
+                shadowTimer = 0f;
+                var shadow = new SimpleParticleProperties(
+                    1f, 1f,
+                    ColorUtil.ToRgba(135, 28, 52, 62),
+                    new Vec3d(fx - 0.16, fy - 0.03, fz - 0.16),
+                    new Vec3d(fx + 0.16, fy - 0.01, fz + 0.16),
+                    new Vec3f(-0.03f, 0f, -0.03f),
+                    new Vec3f(0.03f, 0f, 0.03f),
+                    0.32f, 0f, 0.24f, 0.42f, EnumParticleModel.Quad
+                );
+                shadow.ShouldSwimOnLiquid = true;
+                shadow.OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, -180f);
+                capi.World.SpawnParticles(shadow);
+            }
+
+            // 3. Dynamic Splashes and Droplets (spray shooting up into air)
+            splashTimer += dt;
+            float splashInterval = sim.Behaviour switch
+            {
+                FishBehaviour.Dash => 0.05f,
+                FishBehaviour.Windup => 0.07f,
+                FishBehaviour.Swim => 0.11f,
+                _ => 0.18f
+            };
+
+            if (splashTimer >= splashInterval)
+            {
+                splashTimer = 0f;
+
+                float minCount = 1f, maxCount = 2f;
+                float minUp = 1.0f, maxUp = 2.0f;
+                float horizSpread = 0.5f;
+
+                switch (sim.Behaviour)
+                {
+                    case FishBehaviour.Dash:
+                        minCount = 4f; maxCount = 8f;
+                        minUp = 1.8f; maxUp = 3.3f;
+                        horizSpread = 1.1f;
+                        break;
+                    case FishBehaviour.Windup:
+                        minCount = 2f; maxCount = 4f;
+                        minUp = 0.6f; maxUp = 1.4f;
+                        horizSpread = 0.4f;
+                        break;
+                    case FishBehaviour.Swim:
+                        minCount = 2f; maxCount = 4f;
+                        minUp = 1.1f; maxUp = 2.1f;
+                        horizSpread = 0.65f;
+                        break;
+                    case FishBehaviour.Tired:
+                    case FishBehaviour.Recover:
+                        minCount = 1f; maxCount = 2f;
+                        minUp = 0.5f; maxUp = 1.1f;
+                        horizSpread = 0.35f;
+                        break;
+                }
+
+                var drops = new SimpleParticleProperties(
+                    minCount, maxCount,
+                    ColorUtil.ToRgba(215, 235, 255, 255),
+                    new Vec3d(fx - 0.14, fy + 0.04, fz - 0.14),
+                    new Vec3d(fx + 0.14, fy + 0.12, fz + 0.14),
+                    new Vec3f(-horizSpread, minUp, -horizSpread),
+                    new Vec3f(horizSpread, maxUp, horizSpread),
+                    0.5f, 1.0f, 0.08f, 0.22f, EnumParticleModel.Quad
+                );
+                drops.ShouldDieInLiquid = true;
+                capi.World.SpawnParticles(drops);
+
+                // Bubbles churn underwater during active bursts
+                if (sim.Behaviour == FishBehaviour.Dash || sim.Behaviour == FishBehaviour.Windup)
+                {
+                    var bubbles = new SimpleParticleProperties(
+                        1f, 3f,
+                        ColorUtil.ToRgba(180, 240, 255, 255),
+                        new Vec3d(fx - 0.18, fy - 0.22, fz - 0.18),
+                        new Vec3d(fx + 0.18, fy - 0.05, fz + 0.18),
+                        new Vec3f(-0.1f, 0.35f, -0.1f),
+                        new Vec3f(0.1f, 0.75f, 0.1f),
+                        0.45f, -0.2f, 0.05f, 0.12f, EnumParticleModel.Quad
+                    );
+                    bubbles.ShouldDieInAir = true;
+                    capi.World.SpawnParticles(bubbles);
+                }
+            }
+
+            // 4. In-world Water Audio
+            soundTimer += dt;
+            float soundInterval = sim.Behaviour switch
+            {
+                FishBehaviour.Dash => 0.42f,
+                FishBehaviour.Swim => 0.85f,
+                _ => 1.4f
+            };
+
+            if (soundTimer >= soundInterval)
+            {
+                soundTimer = 0f;
+                float vol = sim.Behaviour switch
+                {
+                    FishBehaviour.Dash => 0.65f,
+                    FishBehaviour.Swim => 0.32f,
+                    _ => 0.18f
+                };
+                capi.World.PlaySoundAt(new AssetLocation("game:sounds/player/swim"), fx, fy, fz, null, true, 20f, vol);
+            }
+        }
+
+        void SpawnOutcomeEffects(FightOutcome outcome)
+        {
+            if (currentFishPos == null) return;
+            double fx = currentFishPos.X, fy = currentFishPos.Y, fz = currentFishPos.Z;
+
+            if (outcome == FightOutcome.Landed)
+            {
+                var splash = new SimpleParticleProperties(
+                    12f, 18f,
+                    ColorUtil.ToRgba(220, 240, 255, 255),
+                    new Vec3d(fx - 0.25, fy + 0.05, fz - 0.25),
+                    new Vec3d(fx + 0.25, fy + 0.15, fz + 0.25),
+                    new Vec3f(-0.9f, 1.8f, -0.9f),
+                    new Vec3f(0.9f, 3.4f, 0.9f),
+                    0.65f, 1.0f, 0.12f, 0.28f, EnumParticleModel.Quad
+                );
+                splash.ShouldDieInLiquid = true;
+                capi.World.SpawnParticles(splash);
+
+                var foam = new SimpleParticleProperties(
+                    3f, 6f,
+                    ColorUtil.ToRgba(180, 230, 245, 255),
+                    new Vec3d(fx - 0.35, fy + 0.02, fz - 0.35),
+                    new Vec3d(fx + 0.35, fy + 0.04, fz + 0.35),
+                    new Vec3f(-0.15f, 0.01f, -0.15f),
+                    new Vec3f(0.15f, 0.04f, 0.15f),
+                    0.8f, 0f, 0.2f, 0.5f, EnumParticleModel.Quad
+                );
+                foam.ShouldSwimOnLiquid = true;
+                foam.OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, -200f);
+                foam.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.4f);
+                capi.World.SpawnParticles(foam);
+
+                capi.World.PlaySoundAt(new AssetLocation("game:sounds/player/swim"), fx, fy, fz, null, true, 22f, 0.85f);
+            }
+            else
+            {
+                var splash = new SimpleParticleProperties(
+                    8f, 12f,
+                    ColorUtil.ToRgba(190, 220, 245, 255),
+                    new Vec3d(fx - 0.2, fy + 0.05, fz - 0.2),
+                    new Vec3d(fx + 0.2, fy + 0.12, fz + 0.2),
+                    new Vec3f(-0.7f, 1.2f, -0.7f),
+                    new Vec3f(0.7f, 2.4f, 0.7f),
+                    0.5f, 1.0f, 0.1f, 0.22f, EnumParticleModel.Quad
+                );
+                splash.ShouldDieInLiquid = true;
+                capi.World.SpawnParticles(splash);
+
+                capi.World.PlaySoundAt(new AssetLocation("game:sounds/player/swim"), fx, fy, fz, null, true, 18f, 0.6f);
+            }
+        }
+
         public void Dispose()
         {
             capi.Event.MouseMove -= OnMouseMove;
             capi.Event.UnregisterRenderer(this, EnumRenderStage.Ortho);
+            ResetFishVisuals();
             ClearTextCache();
             white?.Dispose();
         }

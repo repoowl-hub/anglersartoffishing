@@ -38,10 +38,13 @@ namespace AnglersArtOfFishing
         float time;
         float flash; // 0..1 white flash on state changes
 
+        readonly BobberMotionRenderer motionRenderer;
+
         // In-world water animation
         Vec3d baseBobber;
         Vec3d castOrigin;
         Vec3d currentFishPos;
+        double lastRestingBobberY;
         float swimPhase;
         float splashTimer;
         float rippleTimer;
@@ -75,6 +78,8 @@ namespace AnglersArtOfFishing
                 api.Gui.LoadOrUpdateCairoTexture(surface, false, ref white);
             }
 
+            motionRenderer = new BobberMotionRenderer(this);
+            api.Event.RegisterRenderer(motionRenderer, EnumRenderStage.Before, "anglersartoffishing-motion");
             api.Event.RegisterRenderer(this, EnumRenderStage.Ortho, "anglersartoffishing-hud");
         }
 
@@ -157,18 +162,11 @@ namespace AnglersArtOfFishing
 
         // ------------------------------------------------------------------ frame
 
-        public void OnRenderFrame(float dt, EnumRenderStage stage)
+        public void OnBeforeRenderFrame(float dt)
         {
             time += dt;
-            if (flash > 0) flash = Math.Max(0, flash - dt * 3f);
-            if (toastLeft > 0) toastLeft -= dt;
 
-            if (phase == FishingPhase.Bite)
-            {
-                biteLeft -= dt;
-                UpdateBiteEffects(dt);
-            }
-            else if (phase == FishingPhase.Fight && sim != null)
+            if (phase == FishingPhase.Fight && sim != null)
             {
                 bool reel = capi.Input.InWorldMouseButton.Right;
                 sim.Update(dt, reel);
@@ -187,6 +185,21 @@ namespace AnglersArtOfFishing
                     phase = FishingPhase.Idle; // server answer with the final message follows
                 }
             }
+            else
+            {
+                UpdateBiteBobberMotion(dt);
+            }
+        }
+
+        public void OnRenderFrame(float dt, EnumRenderStage stage)
+        {
+            if (flash > 0) flash = Math.Max(0, flash - dt * 3f);
+            if (toastLeft > 0) toastLeft -= dt;
+
+            if (phase == FishingPhase.Bite)
+            {
+                biteLeft -= dt;
+            }
 
             DrawHud(dt);
         }
@@ -204,20 +217,8 @@ namespace AnglersArtOfFishing
             switch (phase)
             {
                 case FishingPhase.Idle:
-                    {
-                        var slot = capi.World.Player?.InventoryManager?.ActiveHotbarSlot;
-                        if (slot?.Itemstack?.Collectible is ItemFishingPole)
-                        {
-                            var bobber = VanillaPolePatches.GetBobber(capi.World, slot.Itemstack);
-                            if (bobber != null && bobber.WatchedAttributes.GetBool(VanillaPolePatches.BiteAttr))
-                            {
-                                float pulse = 1f + 0.12f * MathF.Sin(time * 30f);
-                                Text("!", cx, baseY - 60 * s, (int)(76 * pulse), 1, 0.85, 0.25, 1, true);
-                                Text(Lang.Get("anglersartoffishing:hud-bite"), cx, baseY, 24, 1, 1, 1, 1, true);
-                            }
-                        }
-                        break;
-                    }
+                    // Diegetic bite feedback: bobber dips and splashes in-world. No exclamation mark or text.
+                    break;
                 case FishingPhase.Waiting:
                     {
                         int dots = (int)(time * 2.5f) % 4;
@@ -226,15 +227,8 @@ namespace AnglersArtOfFishing
                         break;
                     }
                 case FishingPhase.Bite:
-                    {
-                        float pulse = 1f + 0.12f * MathF.Sin(time * 30f);
-                        Text("!", cx, baseY - 60 * s, (int)(76 * pulse), 1, 0.85, 0.25, 1, true);
-                        Text(Lang.Get("anglersartoffishing:hud-bite"), cx, baseY, 24, 1, 1, 1, 1, true);
-                        float w = 220 * s, h = 8 * s;
-                        Rect(cx - w / 2, baseY + 40 * s, w, h, 0, 0, 0, 0.6f);
-                        Rect(cx - w / 2, baseY + 40 * s, w * Math.Clamp(biteLeft / biteWindow, 0, 1), h, 1, 0.8f, 0.25f, 1);
-                        break;
-                    }
+                    // Diegetic bite feedback: bobber goes down in-world. No exclamation mark or text.
+                    break;
                 case FishingPhase.Fight:
                     if (sim != null) DrawFight(dt, s, cx, baseY);
                     break;
@@ -450,40 +444,103 @@ namespace AnglersArtOfFishing
         {
             currentFishPos = null;
             castOrigin = null;
+            baseBobber = null;
+            lastRestingBobberY = 0;
         }
 
-        void UpdateBiteEffects(float dt)
+        void UpdateBiteBobberMotion(float dt)
         {
-            if (baseBobber == null) return;
+            var slot = capi.World.Player?.InventoryManager?.ActiveHotbarSlot;
+            if (slot?.Itemstack?.Collectible is ItemFishingPole)
+            {
+                var bobber = VanillaPolePatches.GetBobber(capi.World, slot.Itemstack);
+                if (bobber != null && bobber.Alive)
+                {
+                    bool biting = bobber.WatchedAttributes.GetBool(VanillaPolePatches.BiteAttr);
+                    if (biting)
+                    {
+                        if (lastRestingBobberY == 0 || Math.Abs(bobber.Pos.Y - lastRestingBobberY) > 1.2)
+                        {
+                            lastRestingBobberY = bobber.Pos.Y;
+                        }
+
+                        // Bobber visibly plunges downward into water with erratic tugging
+                        double dip = 0.28 + 0.08 * MathF.Sin(time * 30f);
+                        float pitch = 0.52f + 0.12f * MathF.Sin(time * 24f);
+                        float roll = 0.18f * MathF.Cos(time * 20f);
+
+                        bobber.Pos.Y = lastRestingBobberY - dip;
+                        bobber.Pos.Pitch = pitch;
+                        bobber.Pos.Roll = roll;
+
+                        var interp = bobber.GetBehavior<EntityBehaviorInterpolatePosition>();
+                        if (interp != null)
+                        {
+                            interp.pN.y = bobber.Pos.Y;
+                            interp.pL.y = bobber.Pos.Y;
+                            interp.positionQueue.Clear();
+                            interp.queueCount = 0;
+                            interp.currentPitch = pitch;
+                            interp.targetPitch = pitch;
+                            interp.currentRoll = roll;
+                            interp.targetRoll = roll;
+                        }
+
+                        var cm = capi.ModLoader.GetModSystem<ClothManager>();
+                        var rope = cm?.GetClothSystemAttachedToEntity(bobber.EntityId);
+                        if (rope != null)
+                        {
+                            rope.LastPoint.Pos.Set(bobber.Pos.X, bobber.Pos.Y, bobber.Pos.Z);
+                            rope.CanRip = false;
+                        }
+
+                        SpawnBiteVisuals(bobber.Pos.X, lastRestingBobberY, bobber.Pos.Z, dt);
+                    }
+                    else
+                    {
+                        lastRestingBobberY = bobber.Pos.Y;
+                    }
+                }
+                else
+                {
+                    lastRestingBobberY = 0;
+                }
+            }
+            else
+            {
+                lastRestingBobberY = 0;
+            }
+        }
+
+        void SpawnBiteVisuals(double x, double surfaceY, double z, float dt)
+        {
             biteSplashTimer += dt;
-            if (biteSplashTimer >= 0.16f)
+            if (biteSplashTimer >= 0.12f)
             {
                 biteSplashTimer = 0f;
 
-                // Periodic bite ripple expanding at the bobber
                 var ripple = new SimpleParticleProperties(
                     1f, 2f,
-                    ColorUtil.ToRgba(200, 235, 248, 255),
-                    new Vec3d(baseBobber.X - 0.08, baseBobber.Y + 0.02, baseBobber.Z - 0.08),
-                    new Vec3d(baseBobber.X + 0.08, baseBobber.Y + 0.04, baseBobber.Z + 0.08),
-                    new Vec3f(-0.03f, 0.01f, -0.03f),
-                    new Vec3f(0.03f, 0.02f, 0.03f),
-                    0.45f, 0f, 0.06f, 0.12f, EnumParticleModel.Quad
+                    ColorUtil.ToRgba(205, 238, 252, 255),
+                    new Vec3d(x - 0.08, surfaceY + 0.01, z - 0.08),
+                    new Vec3d(x + 0.08, surfaceY + 0.03, z + 0.08),
+                    new Vec3f(-0.04f, 0.01f, -0.04f),
+                    new Vec3f(0.04f, 0.02f, 0.04f),
+                    0.50f, 0f, 0.08f, 0.16f, EnumParticleModel.Quad
                 );
                 ripple.ShouldSwimOnLiquid = true;
                 ripple.OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, -200f);
-                ripple.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.06f);
+                ripple.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.08f);
                 capi.World.SpawnParticles(ripple);
 
-                // Small sharp tug splash
                 var splash = new SimpleParticleProperties(
-                    2f, 4f,
-                    ColorUtil.ToRgba(210, 230, 250, 255),
-                    new Vec3d(baseBobber.X - 0.1, baseBobber.Y + 0.05, baseBobber.Z - 0.1),
-                    new Vec3d(baseBobber.X + 0.1, baseBobber.Y + 0.1, baseBobber.Z + 0.1),
-                    new Vec3f(-0.5f, 0.8f, -0.5f),
-                    new Vec3f(0.5f, 1.8f, 0.5f),
-                    0.45f, 1.0f, 0.08f, 0.18f, EnumParticleModel.Quad
+                    2f, 3f,
+                    ColorUtil.ToRgba(215, 235, 255, 255),
+                    new Vec3d(x - 0.06, surfaceY + 0.02, z - 0.06),
+                    new Vec3d(x + 0.06, surfaceY + 0.06, z + 0.06),
+                    new Vec3f(-0.35f, 0.6f, -0.35f),
+                    new Vec3f(0.35f, 1.4f, 0.35f),
+                    0.40f, 1.0f, 0.07f, 0.15f, EnumParticleModel.Quad
                 );
                 splash.ShouldDieInLiquid = true;
                 capi.World.SpawnParticles(splash);
@@ -492,6 +549,11 @@ namespace AnglersArtOfFishing
 
         void UpdateFightWaterEffects(float dt)
         {
+            if (baseBobber == null && bobberEntityId != 0)
+            {
+                var b = capi.World.GetEntityById(bobberEntityId);
+                if (b != null) baseBobber = b.Pos.XYZ.Clone();
+            }
             if (baseBobber == null || sim == null) return;
             var player = capi.World.Player?.Entity;
             if (player == null) return;
@@ -553,10 +615,17 @@ namespace AnglersArtOfFishing
 
             double targetLateral = lateralBase + lateralWiggle;
 
+            // Vertical bobbing and line tension dive
+            double dip = Math.Clamp(sim.Tension * 0.16 + (sim.Behaviour == FishBehaviour.Dash ? 0.10 : 0.0), 0.0, 0.28);
+            double thrash = MathF.Sin(swimPhase * 2.2f) * 0.035;
+
             // World coordinates on water surface
             double targetX = castOrigin.X + fwdX * (targetDist + surge) + rightX * targetLateral;
-            double targetY = baseBobber.Y;
+            double targetY = baseBobber.Y - dip + thrash;
             double targetZ = castOrigin.Z + fwdZ * (targetDist + surge) + rightZ * targetLateral;
+
+            double prevX = currentFishPos?.X ?? targetX;
+            double prevZ = currentFishPos?.Z ?? targetZ;
 
             if (currentFishPos == null)
             {
@@ -574,13 +643,41 @@ namespace AnglersArtOfFishing
             double fy = currentFishPos.Y;
             double fz = currentFishPos.Z;
 
+            // Movement yaw for realistic bobber orientation
+            double moveDx = fx - prevX;
+            double moveDz = fz - prevZ;
+            float swimYaw = Math.Abs(moveDx) > 0.001 || Math.Abs(moveDz) > 0.001
+                ? (float)Math.Atan2(moveDx, moveDz)
+                : (float)Math.Atan2(fwdX, fwdZ);
+
+            float tiltPitch = (float)(0.20f + 0.30f * sim.Tension);
+            float tiltRoll = (float)(MathF.Sin(swimPhase) * 0.22f);
+
             // Make the vanilla bobber entity and the attached rope follow the foaming fish in world
             if (bobberEntityId != 0)
             {
                 var bobber = capi.World.GetEntityById(bobberEntityId);
-                if (bobber != null)
+                if (bobber != null && bobber.Alive)
                 {
                     bobber.Pos.SetPos(fx, fy, fz);
+                    bobber.Pos.Yaw = swimYaw;
+                    bobber.Pos.Pitch = tiltPitch;
+                    bobber.Pos.Roll = tiltRoll;
+
+                    var interp = bobber.GetBehavior<EntityBehaviorInterpolatePosition>();
+                    if (interp != null)
+                    {
+                        interp.pN.x = fx; interp.pN.y = fy; interp.pN.z = fz;
+                        interp.pL.x = fx; interp.pL.y = fy; interp.pL.z = fz;
+                        interp.positionQueue.Clear();
+                        interp.queueCount = 0;
+                        interp.currentYaw = swimYaw;
+                        interp.targetYaw = swimYaw;
+                        interp.currentPitch = tiltPitch;
+                        interp.targetPitch = tiltPitch;
+                        interp.currentRoll = tiltRoll;
+                        interp.targetRoll = tiltRoll;
+                    }
 
                     var cm = capi.ModLoader.GetModSystem<ClothManager>();
                     var rope = cm?.GetClothSystemAttachedToEntity(bobberEntityId);
@@ -780,10 +877,31 @@ namespace AnglersArtOfFishing
 
         public void Dispose()
         {
+            capi.Event.UnregisterRenderer(motionRenderer, EnumRenderStage.Before);
             capi.Event.UnregisterRenderer(this, EnumRenderStage.Ortho);
             ResetFishVisuals();
             ClearTextCache();
             white?.Dispose();
+        }
+
+        class BobberMotionRenderer : IRenderer
+        {
+            readonly FishingClient client;
+
+            public double RenderOrder => 0.95;
+            public int RenderRange => 9999;
+
+            public BobberMotionRenderer(FishingClient client)
+            {
+                this.client = client;
+            }
+
+            public void OnRenderFrame(float dt, EnumRenderStage stage)
+            {
+                client.OnBeforeRenderFrame(dt);
+            }
+
+            public void Dispose() { }
         }
     }
 }

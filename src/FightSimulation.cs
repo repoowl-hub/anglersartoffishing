@@ -41,27 +41,27 @@ namespace AnglersArtOfFishing
     }
 
     /// <summary>
-    /// Pure, API-independent simulation of the fight. Driven once per frame by the client.
+    /// Pure, API-independent simulation of the fight inspired by realistic angling mechanics.
     ///
-    /// Core loop (modelled on Monster Hunter Wilds' fishing):
-    ///  - Holding "reel" adds tension and brings the fish closer, but the fish pulls back.
-    ///  - Tension in the SWEET zone drains the fish's stamina. Too high = line snaps, too low = fish slips off.
-    ///  - The fish telegraphs a bolt (Windup), then Dashes left or right. You survive by letting the line run
-    ///    (release reel) and/or steering the rod AGAINST the fish.
-    ///  - When stamina hits zero the fish is Tired: reel it in fast, but it will eventually get a second wind.
+    /// Core loop:
+    ///  - Holding [RMB] reels in line, pulling the fish closer and increasing line tension.
+    ///  - When the fish dashes or thrashes, pull force surges. Reeling during a dash will spike tension
+    ///    into the red snap danger zone. The player must feather or release [RMB] until the surge passes.
+    ///  - Line tension maintained in the sweet zone (0.25 - 0.88) exhausts the fish's stamina.
+    ///  - When stamina is depleted the fish is Tired: pull drops to near zero and the player can crank the reel in fast.
     /// </summary>
     public class FightSimulation
     {
         // ---- Tunables (feel) ----
-        public const float SweetMin = 0.35f;
-        public const float SweetMax = 0.78f;
-        public const float DangerStart = 0.92f;
+        public const float SweetMin = 0.25f;
+        public const float SweetMax = 0.85f;
+        public const float DangerStart = 0.88f;
 
         const float BaseTension = 0.10f;
         const float ReelTension = 0.28f;
-        const float BaseReelSpeed = 0.11f;        // distance units / second while reeling calmly
-        const float SlackThreshold = 0.12f;
-        const float SlackEscapeSeconds = 6.5f;
+        const float BaseReelSpeed = 0.12f;        // distance units / second while reeling calmly
+        const float SlackThreshold = 0.14f;
+        const float SlackEscapeSeconds = 6.0f;
         const float WindupSeconds = 1.15f;
         const float TiredSeconds = 7.0f;
         const float LandedDistance = 0.02f;
@@ -69,23 +69,23 @@ namespace AnglersArtOfFishing
         readonly FightParams p;
         readonly Random rand;
 
-        // ---- Public state (read by HUD) ----
+        // ---- Public state (read by HUD & water effects) ----
         public float Tension { get; private set; } = 0.25f;
         public float Distance { get; private set; }
         public float Stamina { get; private set; } = 1f;
         public FishBehaviour Behaviour { get; private set; } = FishBehaviour.Swim;
         /// <summary>-1 = fish pulls left, +1 = right.</summary>
         public int FishDir { get; private set; } = 1;
-        /// <summary>-1..1 smoothed rod angle.</summary>
-        public float RodAngle { get; private set; }
-        /// <summary>Visual lateral position of the fish, -1..1.</summary>
+        /// <summary>Backwards compatibility.</summary>
+        public float RodAngle => 0f;
+        /// <summary>Visual lateral position of the fish, -1..1 (used for in-world splash & wake positioning).</summary>
         public float FishLateral { get; private set; }
         public float DangerTimer { get; private set; }
         public float SlackTimer { get; private set; }
         public float Elapsed { get; private set; }
         public float PullNow { get; private set; }
         public bool Reeling { get; private set; }
-        public bool CounterSteering { get; private set; }
+        public bool CounterSteering => false;
         public int SecondWinds { get; private set; }
         public FightOutcome Outcome { get; private set; } = FightOutcome.None;
 
@@ -110,16 +110,18 @@ namespace AnglersArtOfFishing
             SetBehaviour(FishBehaviour.Swim, 1.5f + (float)rand.NextDouble());
         }
 
-        public void Update(float dt, bool reelHeld, float steerInput)
+        public void Update(float dt, bool reelHeld, float steerInput = 0f)
+        {
+            Update(dt, reelHeld);
+        }
+
+        public void Update(float dt, bool reelHeld)
         {
             if (Finished) return;
             dt = Math.Min(dt, 0.05f); // protect against frame hitches
             Elapsed += dt;
 
             Reeling = reelHeld;
-
-            // --- rod angle follows the steer input smoothly ---
-            RodAngle += (Math.Clamp(steerInput, -1f, 1f) - RodAngle) * (1f - MathF.Exp(-12f * dt));
 
             UpdateBehaviour(dt);
             UpdatePull(dt);
@@ -128,7 +130,7 @@ namespace AnglersArtOfFishing
             UpdateDistance(dt);
             UpdateFailureStates(dt);
 
-            // Fish drifts sideways in the dash direction, drifts back to centre otherwise
+            // Fish drifts sideways in the dash direction, drifts back to centre otherwise (drives in-world splashes)
             float latTarget = (Behaviour == FishBehaviour.Dash) ? FishDir * 0.9f : (Behaviour == FishBehaviour.Windup ? FishDir * 0.25f : 0f);
             FishLateral += (latTarget - FishLateral) * (1f - MathF.Exp(-4.5f * dt));
 
@@ -162,7 +164,6 @@ namespace AnglersArtOfFishing
             switch (Behaviour)
             {
                 case FishBehaviour.Swim:
-                    // higher aggression = shorter calm periods. Fish never bolts straight away.
                     FishDir = rand.Next(2) == 0 ? -1 : 1;
                     SetBehaviour(FishBehaviour.Windup, WindupSeconds);
                     break;
@@ -176,7 +177,7 @@ namespace AnglersArtOfFishing
                     SetBehaviour(FishBehaviour.Swim, CalmDuration());
                     break;
                 case FishBehaviour.Tired:
-                    // Second wind: the fish gets some stamina back but you're closer than before
+                    // Second wind: the fish gets a small amount of stamina back if not landed in time
                     SecondWinds++;
                     Stamina = Math.Max(0.25f, 0.38f - 0.08f * SecondWinds);
                     SetBehaviour(FishBehaviour.Swim, CalmDuration());
@@ -197,45 +198,38 @@ namespace AnglersArtOfFishing
         {
             float target = Behaviour switch
             {
-                FishBehaviour.Swim => 0.25f,
-                FishBehaviour.Windup => 0.15f + 0.30f * (behaviourTimer / WindupSeconds), // little tugs that build
+                FishBehaviour.Swim => 0.28f,
+                FishBehaviour.Windup => 0.18f + 0.25f * (behaviourTimer / WindupSeconds), // building pre-dash tension
                 FishBehaviour.Dash => 1.0f,
-                FishBehaviour.Recover => 0.35f,
-                FishBehaviour.Tired => 0.06f,
+                FishBehaviour.Recover => 0.32f,
+                FishBehaviour.Tired => 0.05f,
                 _ => 0.25f
             };
 
-            // Fast attack, lazy release = the dash feels like a *snap*, then eases off
-            float k = target > PullNow ? 11f : 4f;
+            // Fast attack, smooth release = sudden jerk on dash, then eases off
+            float k = target > PullNow ? 12f : 4f;
             PullNow += (target - PullNow) * (1f - MathF.Exp(-k * dt));
-        }
-
-        float CounterFactor()
-        {
-            // Rod angle opposite to fish direction reduces the load
-            float counter = RodAngle * -FishDir;
-            CounterSteering = counter > 0.35f && (Behaviour == FishBehaviour.Dash || Behaviour == FishBehaviour.Windup);
-            if (Behaviour != FishBehaviour.Dash && Behaviour != FishBehaviour.Windup) return 1f;
-            return counter > 0 ? 1f - 0.5f * Math.Clamp(counter, 0f, 1f)
-                               : 1f + 0.2f * Math.Clamp(-counter, 0f, 1f);
         }
 
         float PullLoad()
         {
-            float rodReduction = 1f / (0.75f + 0.25f * (1 + Math.Max(0, p.RodMargin)));
+            // Rod margin reduces stress: sturdier rods dampen the fish's pull force
+            float rodReduction = 1f / (0.80f + 0.20f * (1 + Math.Max(0, p.RodMargin)));
             float fishLoad = PullNow * (0.35f + 0.65f * Math.Clamp(p.Power, 0f, 1f));
-            return fishLoad * CounterFactor() * rodReduction;
+            return fishLoad * rodReduction;
         }
 
         void UpdateTension(float dt)
         {
-            float tired = Behaviour == FishBehaviour.Tired ? 0.6f : 1f;
+            float tired = Behaviour == FishBehaviour.Tired ? 0.35f : 1f;
             float pull = PullLoad();
 
-            // Releasing the reel lets line slip: only part of the pull reaches the rod.
-            float target = BaseTension + pull * (Reeling ? 1f : 0.5f) + (Reeling ? ReelTension * tired : 0f);
+            // When reeling: line winches tight against pull + reel gear tension.
+            // When not reeling: reel drag lets line slip, reducing tension.
+            float reelLoad = Reeling ? (ReelTension * p.ReelSpeed * tired) : 0f;
+            float target = BaseTension + pull * (Reeling ? 0.90f : 0.42f) + reelLoad;
 
-            float k = target > Tension ? 8f : 12f;
+            float k = target > Tension ? 9f : 14f;
             Tension += (target - Tension) * (1f - MathF.Exp(-k * dt));
             Tension = Math.Clamp(Tension, 0f, 1.05f);
         }
@@ -244,12 +238,16 @@ namespace AnglersArtOfFishing
         {
             if (Behaviour == FishBehaviour.Tired) return;
 
+            // Fish stamina drains whenever tension is maintained in the active fight zone (0.25 - 0.88)
             float drain = 0f;
-            if (Tension >= SweetMin && Tension <= SweetMax + 0.08f) drain = 1.2f;
-            else if (Tension > 0.20f && Tension < SweetMin) drain = 0.4f;
-
-            // Skilful counter-steering during a dash wears the fish out faster
-            if (CounterSteering) drain += 0.8f;
+            if (Tension >= SweetMin && Tension <= DangerStart)
+            {
+                drain = 1.0f + 0.5f * ((Tension - SweetMin) / (DangerStart - SweetMin));
+            }
+            else if (Tension > SlackThreshold && Tension < SweetMin)
+            {
+                drain = 0.35f;
+            }
 
             float perSecond = 1f / Math.Max(2f, p.StaminaSeconds);
             Stamina -= drain * perSecond * dt;
@@ -269,27 +267,30 @@ namespace AnglersArtOfFishing
             {
                 float speedFactor = Behaviour switch
                 {
-                    FishBehaviour.Tired => 1.9f,
-                    FishBehaviour.Recover => 0.8f,
+                    FishBehaviour.Tired => 2.0f,
+                    FishBehaviour.Recover => 0.9f,
                     FishBehaviour.Swim => 1.0f,
-                    _ => 0.5f
+                    _ => 0.4f
                 };
 
-                // Reeling is only effective when the line isn't being yanked out of your hands
-                float resist = Math.Clamp(PullNow * (0.35f + 0.65f * p.Power) * CounterFactor() * 1.4f, 0f, 0.95f);
+                // Winching in line
+                float resist = Math.Clamp(PullLoad() * 1.15f, 0f, 0.92f);
                 if (Behaviour == FishBehaviour.Tired) resist = 0f;
                 change -= reelRate * speedFactor * (1f - resist);
             }
 
-            // The fish pulls line out while dashing - harder if you let it run (not reeling) than the reel could hold.
+            // During dash: fish runs and pulls line out (more if player isn't holding reel)
             if (Behaviour == FishBehaviour.Dash)
             {
-                float drag = 0.025f + 0.035f * p.Power;
-                change += drag * (Reeling ? 0.35f : 1f) * PullNow;
+                float runSpeed = 0.035f + 0.045f * p.Power;
+                change += runSpeed * (Reeling ? 0.25f : 1.0f) * PullNow;
             }
 
-            // Slack: fish gains ground
-            if (Tension < SlackThreshold && Behaviour != FishBehaviour.Tired) change += 0.02f;
+            // Slack line allows fish to swim away slowly
+            if (Tension < SlackThreshold && Behaviour != FishBehaviour.Tired)
+            {
+                change += 0.025f;
+            }
 
             Distance = Math.Clamp(Distance + change * dt, 0f, 1.15f);
         }

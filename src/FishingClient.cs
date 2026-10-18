@@ -30,14 +30,9 @@ namespace AnglersArtOfFishing
         bool toastGood;
 
         // Smoothed display values
-        float dispTension, dispStamina = 1f, dispDistance = 1f;
+        float dispTension, dispDistance = 1f;
         float time;
         float flash; // 0..1 white flash on state changes
-
-        // Mouse steering
-        const float MouseSteerSensitivity = 0.005f; // ~200px horizontal sweep = full +/-1 tilt
-        const float CenterReturnSpeed = 0.35f;       // gradual return-to-center when mouse is stationary
-        float steerTarget;
 
         // In-world water animation
         Vec3d baseBobber;
@@ -77,7 +72,6 @@ namespace AnglersArtOfFishing
             }
 
             api.Event.RegisterRenderer(this, EnumRenderStage.Ortho, "anglersartoffishing-hud");
-            api.Event.MouseMove += OnMouseMove;
         }
 
         // ------------------------------------------------------------------ network / input
@@ -116,7 +110,6 @@ namespace AnglersArtOfFishing
                     break;
                 case FishingPhase.Fight:
                     speciesName = p.SpeciesName;
-                    steerTarget = 0f;
                     sim = new FightSimulation(new FightParams
                     {
                         Power = p.Power,
@@ -130,7 +123,6 @@ namespace AnglersArtOfFishing
                     sim.BehaviourChanged += _ => flash = 0.6f;
                     reported = FightOutcome.None;
                     dispTension = sim.Tension;
-                    dispStamina = 1f;
                     dispDistance = sim.Distance;
                     flash = 1f;
                     InitFightVisuals();
@@ -146,15 +138,6 @@ namespace AnglersArtOfFishing
             {
                 hookSent = true;
                 channel.SendPacket(new FishingActionPacket { Action = 0 });
-            }
-        }
-
-        void OnMouseMove(MouseEvent e)
-        {
-            if (phase == FishingPhase.Fight && sim != null && capi.Input.MouseGrabbed)
-            {
-                steerTarget = Math.Clamp(steerTarget + e.DeltaX * MouseSteerSensitivity, -1f, 1f);
-                e.Handled = true;
             }
         }
 
@@ -181,14 +164,7 @@ namespace AnglersArtOfFishing
             else if (phase == FishingPhase.Fight && sim != null)
             {
                 bool reel = capi.Input.InWorldMouseButton.Right;
-
-                // Passive return-to-center drift so player never runs out of mousepad space
-                if (MathF.Abs(steerTarget) > 0.001f)
-                {
-                    steerTarget -= MathF.Sign(steerTarget) * Math.Min(MathF.Abs(steerTarget), CenterReturnSpeed * dt);
-                }
-
-                sim.Update(dt, reel, steerTarget);
+                sim.Update(dt, reel);
                 UpdateFightWaterEffects(dt);
 
                 if (sim.Finished && reported == FightOutcome.None)
@@ -252,98 +228,149 @@ namespace AnglersArtOfFishing
 
         void DrawFight(float dt, float s, float cx, float baseY)
         {
-            // Smooth the displayed values (the simulation itself is already continuous)
+            // Smooth the displayed tension and distance
             dispTension += (sim.Tension - dispTension) * (1f - MathF.Exp(-22f * dt));
-            dispStamina += (sim.Stamina - dispStamina) * (1f - MathF.Exp(-10f * dt));
             dispDistance += (sim.Distance - dispDistance) * (1f - MathF.Exp(-14f * dt));
 
             float danger = sim.DangerRatio;
-            float shake = danger > 0.05f ? MathF.Sin(time * 70f) * 3.5f * danger * s : 0f;
+            float shake = danger > 0.05f ? MathF.Sin(time * 70f) * 4f * danger * s : 0f;
 
-            float barW = 400 * s, barH = 24 * s;
+            float barW = 440 * s, barH = 24 * s;
             float x0 = cx - barW / 2 + shake;
             float yT = baseY;
 
-            // ---------------- status line
-            string status; double sr = 1, sg = 1, sb = 1;
-            string dirArrow = sim.FishDir < 0 ? "<<" : ">>";
-            string steerArrow = sim.FishDir < 0 ? ">>" : "<<";
-            switch (sim.Behaviour)
+            // ---------------- Species & Dynamic Status Feedback
+            string status;
+            double sr = 1, sg = 1, sb = 1;
+            if (danger > 0.08f)
             {
-                case FishBehaviour.Windup: status = $"{dirArrow}  {Lang.Get("anglersartoffishing:hud-windup")}  {dirArrow}"; sr = 1; sg = 0.78; sb = 0.25; break;
-                case FishBehaviour.Dash: status = $"{Lang.Get("anglersartoffishing:hud-dash")}  {steerArrow}"; sr = 1; sg = 0.35; sb = 0.3; break;
-                case FishBehaviour.Recover: status = Lang.Get("anglersartoffishing:hud-recover"); sr = 0.8; sg = 0.85; sb = 0.9; break;
-                case FishBehaviour.Tired: status = Lang.Get("anglersartoffishing:hud-tired"); sr = 0.45; sg = 1; sb = 0.55; break;
-                default: status = Lang.Get("anglersartoffishing:hud-swim"); break;
+                status = "[! OVERLOAD - RELEASE REEL !]";
+                sr = 1.0; sg = 0.25; sb = 0.2;
             }
-            Text(speciesName, cx, yT - 82 * s, 16, 0.85, 0.9, 1, 0.85, true);
-            Text(status, cx, yT - 54 * s, 26, sr, sg, sb, 1, true);
+            else if (sim.Behaviour == FishBehaviour.Dash)
+            {
+                status = $"[! {Lang.Get("anglersartoffishing:hud-dash")} !]";
+                sr = 1.0; sg = 0.35; sb = 0.25;
+            }
+            else if (sim.Behaviour == FishBehaviour.Windup)
+            {
+                status = $"[ {Lang.Get("anglersartoffishing:hud-windup")} ]";
+                sr = 1.0; sg = 0.85; sb = 0.3;
+            }
+            else if (sim.Behaviour == FishBehaviour.Tired)
+            {
+                status = $"[ {Lang.Get("anglersartoffishing:hud-tired")} ]";
+                sr = 0.35; sg = 1.0; sb = 0.5;
+            }
+            else if (sim.Behaviour == FishBehaviour.Recover)
+            {
+                status = $"[ {Lang.Get("anglersartoffishing:hud-recover")} ]";
+                sr = 0.65; sg = 0.95; sb = 0.8;
+            }
+            else
+            {
+                if (sim.Reeling)
+                {
+                    status = "[ Reeling In ]";
+                    sr = 0.75; sg = 0.95; sb = 1.0;
+                }
+                else
+                {
+                    status = $"[ {Lang.Get("anglersartoffishing:hud-swim")} ]";
+                    sr = 0.75; sg = 0.85; sb = 0.95;
+                }
+            }
 
-            // ---------------- stamina (thin, above tension)
-            float ySt = yT - 22 * s;
-            Rect(x0, ySt, barW, 7 * s, 0, 0, 0, 0.55f);
-            Rect(x0, ySt, barW * Math.Clamp(dispStamina, 0, 1), 7 * s, 1f, 0.6f, 0.2f, 0.95f);
+            Text(speciesName, cx, yT - 52 * s, 15, 0.82, 0.90, 1.0, 0.85, true);
+            Text(status, cx, yT - 30 * s, 22, sr, sg, sb, 1, true);
 
-            // ---------------- tension bar
-            Rect(x0 - 3 * s, yT - 3 * s, barW + 6 * s, barH + 6 * s, 0.05f, 0.05f, 0.07f, 0.8f);
-            Rect(x0, yT, barW, barH, 0.12f, 0.14f, 0.17f, 0.95f);
+            // ---------------- Single Horizontal Tension Bar
+            // Outer frame
+            Rect(x0 - 4 * s, yT - 4 * s, barW + 8 * s, barH + 8 * s, 0.04f, 0.05f, 0.07f, 0.88f);
+            // Slot track
+            Rect(x0, yT, barW, barH, 0.10f, 0.12f, 0.15f, 0.95f);
 
-            // zones
-            Rect(x0 + barW * FightSimulation.SweetMin, yT, barW * (FightSimulation.SweetMax - FightSimulation.SweetMin), barH, 0.3f, 0.9f, 0.45f, 0.30f);
-            Rect(x0 + barW * FightSimulation.DangerStart, yT, barW * (1f - FightSimulation.DangerStart), barH, 1f, 0.2f, 0.2f, 0.35f);
+            // Zone underlays
+            // Slack zone (0.0 to 0.14)
+            Rect(x0, yT, barW * 0.14f, barH, 0.20f, 0.50f, 0.85f, 0.22f);
+            // Safe fight zone (0.25 to 0.85)
+            Rect(x0 + barW * FightSimulation.SweetMin, yT, barW * (FightSimulation.SweetMax - FightSimulation.SweetMin), barH, 0.25f, 0.85f, 0.40f, 0.20f);
+            // Danger snap zone (0.88 to 1.00)
+            Rect(x0 + barW * FightSimulation.DangerStart, yT, barW * (1f - FightSimulation.DangerStart), barH, 0.95f, 0.18f, 0.18f, 0.35f);
 
-            // fill
+            // Subtle zone tick dividers
+            Rect(x0 + barW * FightSimulation.SweetMin - 1 * s, yT, 2 * s, barH, 1f, 1f, 1f, 0.22f);
+            Rect(x0 + barW * FightSimulation.DangerStart - 1 * s, yT, 2 * s, barH, 1f, 0.35f, 0.35f, 0.35f);
+
+            // Fill
             float t = Math.Clamp(dispTension, 0f, 1f);
             GetTensionColor(t, out float fr, out float fg, out float fb);
-            Rect(x0, yT + 3 * s, barW * t, barH - 6 * s, fr, fg, fb, 0.95f);
-            // marker
-            Rect(x0 + barW * t - 1.5f * s, yT - 5 * s, 3 * s, barH + 10 * s, 1, 1, 1, 1);
+            Rect(x0 + 1 * s, yT + 2 * s, (barW - 2 * s) * t, barH - 4 * s, fr, fg, fb, 0.95f);
+
+            // Needle indicator pip
+            Rect(x0 + barW * t - 1.5f * s, yT - 5 * s, 3 * s, barH + 10 * s, 1f, 1f, 1f, 1f);
+
+            // Red overload pulsing border
             if (danger > 0.02f)
             {
-                float blink = 0.4f + 0.6f * MathF.Abs(MathF.Sin(time * 14f));
-                Rect(x0 - 3 * s, yT - 3 * s, barW + 6 * s, 3 * s, 1, 0.15f, 0.15f, danger * blink);
-                Rect(x0 - 3 * s, yT + barH, barW + 6 * s, 3 * s, 1, 0.15f, 0.15f, danger * blink);
+                float blink = 0.4f + 0.6f * MathF.Abs(MathF.Sin(time * 16f));
+                Rect(x0 - 4 * s, yT - 4 * s, barW + 8 * s, 3 * s, 1f, 0.15f, 0.15f, danger * blink);
+                Rect(x0 - 4 * s, yT + barH + 1 * s, barW + 8 * s, 3 * s, 1f, 0.15f, 0.15f, danger * blink);
+                Rect(x0 - 4 * s, yT - 4 * s, 3 * s, barH + 8 * s, 1f, 0.15f, 0.15f, danger * blink);
+                Rect(x0 + barW + 1 * s, yT - 4 * s, 3 * s, barH + 8 * s, 1f, 0.15f, 0.15f, danger * blink);
             }
 
-            // slack warning
+            // Slack line warning
             if (sim.SlackRatio > 0.05f)
             {
-                Text(Lang.Get("anglersartoffishing:hud-slack"), cx, yT + barH + 8 * s, 15, 0.6, 0.8, 1, 0.5 + 0.5 * sim.SlackRatio, true);
+                float slackAlpha = 0.5f + 0.5f * sim.SlackRatio;
+                Text(Lang.Get("anglersartoffishing:hud-slack"), cx, yT - 8 * s, 14, 0.5, 0.8, 1.0, slackAlpha, true);
             }
 
-            // ---------------- direction track (fish vs rod)
-            float yTr = yT + barH + 12 * s;
-            float trackH = 14 * s;
-            Rect(x0, yTr, barW, trackH, 0, 0, 0, 0.5f);
-            Rect(cx - 1 * s, yTr, 2 * s, trackH, 1, 1, 1, 0.25f);
-
-            // highlight the side to steer towards
-            if (sim.Behaviour == FishBehaviour.Windup || sim.Behaviour == FishBehaviour.Dash)
+            // ---------------- Digital Distance & Controls readout
+            double distMeters;
+            var player = capi.World.Player?.Entity;
+            if (currentFishPos != null && player != null)
             {
-                float side = -sim.FishDir;
-                float hx = side > 0 ? cx : x0;
-                Rect(hx, yTr, barW / 2, trackH, 0.3f, 0.9f, 0.5f, sim.CounterSteering ? 0.45f : 0.2f);
+                distMeters = currentFishPos.DistanceTo(player.Pos.XYZ);
+            }
+            else
+            {
+                distMeters = 18.0 * dispDistance;
             }
 
-            float fx = cx + sim.FishLateral * (barW / 2 - 8 * s);
-            float rx = cx + sim.RodAngle * (barW / 2 - 8 * s);
-            Rect(fx - 8 * s, yTr - 3 * s, 16 * s, trackH + 6 * s, 1, 0.55f, 0.25f, 1);   // fish
-            Rect(rx - 3 * s, yTr - 2 * s, 6 * s, trackH + 4 * s, 0.6f, 0.9f, 1, 1);      // rod
-
-            // ---------------- distance / progress
-            float yD = yTr + trackH + 10 * s;
-            Rect(x0, yD, barW, 9 * s, 0, 0, 0, 0.55f);
-            Rect(x0, yD, barW * Math.Clamp(1f - dispDistance, 0, 1), 9 * s, 0.35f, 0.65f, 1f, 0.95f);
-
-            Text(Lang.Get("anglersartoffishing:hud-controls"), cx, yD + 14 * s, 13, 0.85, 0.85, 0.85, 0.6, true);
+            Text($"Distance: {distMeters:0.0}m", cx, yT + barH + 10 * s, 16, 0.90, 0.95, 1.0, 0.95, true);
+            Text(Lang.Get("anglersartoffishing:hud-controls"), cx, yT + barH + 34 * s, 13, 0.80, 0.82, 0.86, 0.65, true);
         }
 
         static void GetTensionColor(float t, out float r, out float g, out float b)
         {
-            if (t < FightSimulation.SweetMin) { float k = t / FightSimulation.SweetMin; r = 0.3f; g = 0.55f + 0.2f * k; b = 0.9f - 0.3f * k; }
-            else if (t < FightSimulation.SweetMax) { r = 0.35f; g = 0.9f; b = 0.45f; }
-            else if (t < FightSimulation.DangerStart) { float k = (t - FightSimulation.SweetMax) / (FightSimulation.DangerStart - FightSimulation.SweetMax); r = 0.35f + 0.65f * k; g = 0.9f - 0.2f * k; b = 0.45f - 0.3f * k; }
-            else { r = 1f; g = 0.25f; b = 0.2f; }
+            if (t < 0.14f)
+            {
+                r = 0.30f; g = 0.55f; b = 0.88f;
+            }
+            else if (t < FightSimulation.SweetMin)
+            {
+                float k = (t - 0.14f) / (FightSimulation.SweetMin - 0.14f);
+                r = 0.30f + 0.02f * k;
+                g = 0.55f + 0.37f * k;
+                b = 0.88f - 0.46f * k;
+            }
+            else if (t < 0.78f)
+            {
+                r = 0.32f; g = 0.92f; b = 0.42f;
+            }
+            else if (t < FightSimulation.DangerStart)
+            {
+                float k = (t - 0.78f) / (FightSimulation.DangerStart - 0.78f);
+                r = 0.32f + 0.63f * k;
+                g = 0.92f - 0.10f * k;
+                b = 0.42f - 0.17f * k;
+            }
+            else
+            {
+                r = 1.0f; g = 0.22f; b = 0.18f;
+            }
         }
 
         // ------------------------------------------------------------------ drawing helpers
@@ -713,7 +740,6 @@ namespace AnglersArtOfFishing
 
         public void Dispose()
         {
-            capi.Event.MouseMove -= OnMouseMove;
             capi.Event.UnregisterRenderer(this, EnumRenderStage.Ortho);
             ResetFishVisuals();
             ClearTextCache();

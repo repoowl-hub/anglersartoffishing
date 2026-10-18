@@ -4,9 +4,7 @@ You are continuing work on a Vintage Story mod (modid `anglersartoffishing`) in 
 Read this whole file first, then read the source files listed below before editing anything.
 
 ## Goal
-A fishing minigame modelled on Monster Hunter Wilds: cast, hook a bite, then fight the fish by
-managing line tension to exhaust it, then land it. Fish species are gated by **bait type** AND
-**rod strength**. Priority: the fight must feel smooth and mechanically satisfying.
+A streamlined, immersive fishing minigame inspired by *Fishing Planet*: cast, hook a bite on the "!", then fight the fish by managing line tension with reel timing (<kbd>RMB</kbd>) to tire the fish and crank it to shore. Fish species are gated by **bait type** AND **rod strength**. Priority: clean, satisfying tactile reel mechanics without screen clutter.
 
 ## Rules for working
 - Look up API signatures in `../VintageStoryAPIDocs/` and the skill at
@@ -17,49 +15,28 @@ managing line tension to exhaust it, then land it. Fish species are gated by **b
 - Do NOT touch the sibling `anglerscatch` mod. Preserve existing comments.
 - Build after every change:
   `dotnet build -c Release -p:VINTAGE_STORY="$env:APPDATA\VSLGameVersions\1.22.7"`
-  (1.22.6 from the csproj default is NOT installed; 1.22.7 is.) Must report 0 errors.
+  (Must report 0 errors).
 - Keep responses concise.
 
-## Current state (builds clean, NOT yet tested in-game)
+## Current state
 | File | Purpose |
 |---|---|
-| `src/FightSimulation.cs` | Pure C# fight sim (no VS API). Tension, stamina, distance, fish behaviours (Swim/Windup/Dash/Recover/Tired), snap/slack/escape outcomes. All feel constants at the top. |
+| `src/FightSimulation.cs` | Pure C# fight sim (no VS API). Fishing Planet style tension model: reel winching vs fish pull load with fixed rod tier drag dampening. Stamina, distance, and 3D lateral trajectory. |
 | `src/FishingData.cs` | `FishSpecies` + `SpeciesRegistry` (loads `config/species.json`, `Roll()` filters by rod strength + bait), ProtoBuf packets `FishingStatePacket` (server→client) and `FishingActionPacket` (client→server). |
 | `src/FishingServer.cs` | Sessions per player: cast (water raycast), bait check, bite timer, bite window, starts fight, validates result (min fight time), gives catch, damages rod, consumes bait. |
-| `src/FishingClient.cs` | `IRenderer` (Ortho). Runs the sim every frame from input (RMB = reel, Mouse move = tilt steer), draws HUD with 1x1 white texture + cached text textures, reports outcome to server. |
+| `src/FishingClient.cs` | `IRenderer` (Ortho). Runs the sim every frame from input (RMB = reel-only), draws sleek single Horizontal Tension Bar HUD with digital distance counter, manages 3D in-world water splash/wake animations. |
 | `src/ItemFishingRod.cs` | Item class `AAFItemFishingRod`; right-click forwards to server/client systems. |
 | `src/AnglersArtModSystem.cs` | Registers item class, loads species (server), creates `FishingServer`/`FishingClient`. |
-| `assets/anglersartoffishing/` | `itemtypes/fishingrod.json` (crude/sturdy/master, attrs `rodStrength`,`reelSpeed`,`forgiveness`), `itemtypes/bait.json` (worm/grain/fishscrap/spinner, attrs `baitType`,`biteSpeed`,`consumeChance`), `config/species.json`, `recipes/grid/fishing.json`, `lang/en.json`, generated icons in `textures/item/`. |
-| `generate_icons.py` | Regenerates placeholder 16x16 icons (stdlib only). |
+| `assets/anglersartoffishing/` | `itemtypes/fishingrod.json`, `itemtypes/bait.json`, `config/species.json`, `recipes/grid/fishing.json`, `lang/en.json`, textures. |
 
 Flow: right-click water with bait in off-hand → server Waiting → Bite (client shows "!", click within ~1.4s)
-→ Fight (client sim) → client sends result → server verifies and rewards.
+→ Fight (client sim with single tension bar) → client sends result → server verifies and rewards.
 
-## Known uncertainties / first things to verify
-1. Vanilla codes used in recipes/catches are guesses: `game:fish-raw`, `game:flaxtwine`, `game:rot`,
-   `game:ingot-copper`, `game:ingot-iron`, `game:stick`, `game:grain-*`. Check
-   `%APPDATA%\VintagestoryData\Logs\server-main.log` / `client-main.log` for missing-item warnings and fix.
-2. Items use flat sprite rendering (`"texture": {"base": ...}`, no shape). Confirm they load and show icons.
-3. HUD text alpha fade is not implemented (toast just disappears); Rect alpha works.
-4. [FIXED] Player movement conflict: steering is now exclusively mouse tilting (consumes horizontal mouse movement and locks camera during fight).
-5. Balance has never been playtested. Constants in `FightSimulation.cs` are theoretical.
-
-## Suggested next tasks (in order)
-1. Package and test: `powershell -ExecutionPolicy Bypass -File ../.agents/skills/vintage-story-modding/scripts/package_mod.ps1 -ModPath "anglersartoffishing"`
-   (may need the 1.22.7 path adjustment; check the script). Launch the game, fix log errors.
-2. Add a headless balance test harness (console or xunit referencing only `FightSimulation.cs`) with a
-   bot that releases during Dash and reels otherwise; verify low-power fish are landable ~100% and
-   max-power fish with a crude rod are hard but not impossible (the species gate already prevents
-   that pairing, so test margin 0 vs margin 2).
-3. Polish feel: camera/FOV punch on Dash start (hook `BehaviourChanged`), sounds (find valid vanilla
-   sound paths first), screen-edge red vignette in danger, smoother toast fade.
-4. [COMPLETED] In-world water animation: dynamic splashes, expanding surface foam wake, sub-surface fish body silhouette, underwater bubbles, and swim audio tracking the fish's 3D position in real-time as it swims, dashes, and reels into shore.
-5. Extra gating ideas: water type (fresh/salt), depth, time of day, size bias by bait/rod.
-6. Add a `.gitignore` (`bin/`, `obj/`) for this folder if missing.
-
-## Design rules for the fight (do not break these without good reason)
-- Releasing the reel halves the pull reaching the rod but lets the fish gain distance (risk/reward).
-- Stamina only drains in the sweet zone (and faster while counter-steering a dash).
-- Forgiveness timer (not instant snap) before the line breaks; slack timer before the fish escapes.
-- Fish always telegraphs (Windup) before a Dash.
-- Server decides species/size; client simulates; server sanity-checks the result.
+## Mechanics Details (Fishing Planet Style)
+- **Single Horizontal Tension Bar**:
+  - Slack Zone ($0.00 - 0.14$, cyan/blue): Too loose; triggers escape if neglected for $> 6.0\text{s}$.
+  - Sweet / Fight Zone ($0.25 - 0.85$, vibrant emerald to golden amber): Active winching and fish stamina depletion.
+  - Danger Overload Zone ($0.88 - 1.00$, flashing red): Line stress; snaps if held for $> \text{Forgiveness}$ time.
+- **Controls**: Reel-only (<kbd>RMB</kbd>). Camera movement is fully free (no mouse locking/tilting). Reeling against a fish dash spikes tension into the red zone; player feathers or releases <kbd>RMB</kbd> during surges to let rod drag absorb the run.
+- **Digital Distance**: Displayed cleanly below the tension bar in meters (`Distance: 14.2m`).
+- **Water Wake & Splashes**: Dynamically positioned in real-time on the water surface tracing the fish's lateral runs, tail thrashing, and distance to shore.

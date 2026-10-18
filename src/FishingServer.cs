@@ -38,6 +38,9 @@ namespace AnglersArtOfFishing
         readonly Dictionary<string, Session> sessions = new Dictionary<string, Session>();
         readonly Random rand = new Random();
 
+        public IServerNetworkChannel Channel => channel;
+        public VanillaFightServer VanillaServer { get; set; }
+
         public FishingServer(ICoreServerAPI api)
         {
             sapi = api;
@@ -197,7 +200,11 @@ namespace AnglersArtOfFishing
 
         void OnAction(IServerPlayer player, FishingActionPacket packet)
         {
-            if (!sessions.TryGetValue(player.PlayerUID, out var s)) return;
+            if (!sessions.TryGetValue(player.PlayerUID, out var s))
+            {
+                VanillaServer?.TryHandleAction(player, packet);
+                return;
+            }
             long now = sapi.World.ElapsedMilliseconds;
 
             if (packet.Action == 0)

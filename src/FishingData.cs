@@ -108,6 +108,7 @@ namespace AnglersArtOfFishing
         /// <summary>Seconds the player has to set the hook (Bite phase).</summary>
         public float BiteWindow;
         public double BobberX, BobberY, BobberZ;
+        public long BobberEntityId;
 
         // Fight parameters (Fight phase)
         public string SpeciesName;

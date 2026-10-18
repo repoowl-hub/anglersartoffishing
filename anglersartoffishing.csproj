@@ -32,6 +32,10 @@
       <HintPath>$(VINTAGE_STORY)\Lib\cairo-sharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(VINTAGE_STORY)\Lib\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
 
 </Project>

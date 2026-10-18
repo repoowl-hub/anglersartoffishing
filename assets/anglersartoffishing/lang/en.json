@@ -19,6 +19,9 @@
   "fishing-escaped": "The fish got away...",
   "fishing-toofar": "The line went slack - you've drifted too far.",
   "fishing-caught": "Caught a {0}! ({1} cm)",
+  "vanilla-snag": "Submerged Catch",
+  "vanilla-fish": "Wild Fish",
+  "vanilla-caught": "Landed the catch!",
 
   "hud-waiting-hint": "Right-click to reel in",
   "hud-bite": "Right-click NOW!",

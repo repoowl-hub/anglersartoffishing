@@ -24,13 +24,15 @@ A streamlined, immersive fishing minigame inspired by *Fishing Planet*: cast, ho
 | `src/FightSimulation.cs` | Pure C# fight sim (no VS API). Fishing Planet style tension model: reel winching vs fish pull load with fixed rod tier drag dampening. Stamina, distance, and 3D lateral trajectory. |
 | `src/FishingData.cs` | `FishSpecies` + `SpeciesRegistry` (loads `config/species.json`, `Roll()` filters by rod strength + bait), ProtoBuf packets `FishingStatePacket` (server→client) and `FishingActionPacket` (client→server). |
 | `src/FishingServer.cs` | Sessions per player: cast (water raycast), bait check, bite timer, bite window, starts fight, validates result (min fight time), gives catch, damages rod, consumes bait. |
-| `src/FishingClient.cs` | `IRenderer` (Ortho). Runs the sim every frame from input (RMB = reel-only), draws sleek single Horizontal Tension Bar HUD with digital distance counter, manages 3D in-world water splash/wake animations. |
+| `src/FishingClient.cs` | `IRenderer` (Ortho). Runs the sim every frame from input (RMB = reel-only), draws sleek single Horizontal Tension Bar HUD with digital distance counter, manages 3D in-world water splash/wake animations, and syncs vanilla bobber + rope line end to the fish's foam position. |
+| `src/VanillaPoleBridge.cs` | Harmony bridge (`VanillaPolePatches` + `VanillaFightServer`) hooking the vanilla `ItemFishingPole`. Seamlessly takes over when a fish bites, freezes bobber/rope during fight, routes loot through vanilla `TryCatchFish` on landing, and clears catch on line snap/escape. |
 | `src/ItemFishingRod.cs` | Item class `AAFItemFishingRod`; right-click forwards to server/client systems. |
-| `src/AnglersArtModSystem.cs` | Registers item class, loads species (server), creates `FishingServer`/`FishingClient`. |
+| `src/AnglersArtModSystem.cs` | Registers item class, loads species (server), creates `FishingServer`/`FishingClient`, applies and unpatches Harmony hooks. |
 | `assets/anglersartoffishing/` | `itemtypes/fishingrod.json`, `itemtypes/bait.json`, `config/species.json`, `recipes/grid/fishing.json`, `lang/en.json`, textures. |
 
-Flow: right-click water with bait in off-hand → server Waiting → Bite (client shows "!", click within ~1.4s)
-→ Fight (client sim with single tension bar) → client sends result → server verifies and rewards.
+Flow (Custom Rod): right-click water with bait in off-hand → server Waiting → Bite (client shows "!", click within ~1.4s) → Fight (client sim with single tension bar) → client sends result → server verifies and rewards.
+
+Flow (Vanilla Pole Hook): right-click casts vanilla bobber + rope → vanilla waits for bite → on bite, client shows "!" prompt → right-click hooks fish → custom fight takes over (bobber & rope follow foaming fish in 3D) → on landing, vanilla `TryCatchFish` rewards the catch naturally; on snap/escape, catch is cleared and pole damaged.
 
 ## Mechanics Details (Fishing Planet Style)
 - **Single Horizontal Tension Bar**:
@@ -40,3 +42,5 @@ Flow: right-click water with bait in off-hand → server Waiting → Bite (clien
 - **Controls**: Reel-only (<kbd>RMB</kbd>). Camera movement is fully free (no mouse locking/tilting). Reeling against a fish dash spikes tension into the red zone; player feathers or releases <kbd>RMB</kbd> during surges to let rod drag absorb the run.
 - **Digital Distance**: Displayed cleanly below the tension bar in meters (`Distance: 14.2m`).
 - **Water Wake & Splashes**: Dynamically positioned in real-time on the water surface tracing the fish's lateral runs, tail thrashing, and distance to shore.
+- **3D Line & Bobber Tracking**: During a fight on the vanilla pole, `bobber.Pos` and `ClothSystem.LastPoint.Pos` are updated in real-time to match the exact `currentFishPos` coordinates, causing the physical fishing line to stretch and follow the foaming and splashing fish.
+

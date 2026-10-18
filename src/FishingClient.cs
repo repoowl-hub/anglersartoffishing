@@ -5,6 +5,7 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
+using Vintagestory.GameContent;
 
 namespace AnglersArtOfFishing
 {
@@ -23,6 +24,9 @@ namespace AnglersArtOfFishing
         string speciesName = "";
         float biteWindow, biteLeft;
         bool hookSent;
+        long bobberEntityId;
+
+        public bool InFight => phase == FishingPhase.Fight;
 
         // Toast
         string toast;
@@ -95,10 +99,12 @@ namespace AnglersArtOfFishing
             {
                 case FishingPhase.Idle:
                     sim = null;
+                    bobberEntityId = 0;
                     ResetFishVisuals();
                     break;
                 case FishingPhase.Waiting:
                     sim = null;
+                    bobberEntityId = 0;
                     ResetFishVisuals();
                     break;
                 case FishingPhase.Bite:
@@ -110,6 +116,7 @@ namespace AnglersArtOfFishing
                     break;
                 case FishingPhase.Fight:
                     speciesName = p.SpeciesName;
+                    bobberEntityId = p.BobberEntityId;
                     sim = new FightSimulation(new FightParams
                     {
                         Power = p.Power,
@@ -196,6 +203,21 @@ namespace AnglersArtOfFishing
 
             switch (phase)
             {
+                case FishingPhase.Idle:
+                    {
+                        var slot = capi.World.Player?.InventoryManager?.ActiveHotbarSlot;
+                        if (slot?.Itemstack?.Collectible is ItemFishingPole)
+                        {
+                            var bobber = VanillaPolePatches.GetBobber(capi.World, slot.Itemstack);
+                            if (bobber != null && bobber.WatchedAttributes.GetBool(VanillaPolePatches.BiteAttr))
+                            {
+                                float pulse = 1f + 0.12f * MathF.Sin(time * 30f);
+                                Text("!", cx, baseY - 60 * s, (int)(76 * pulse), 1, 0.85, 0.25, 1, true);
+                                Text(Lang.Get("anglersartoffishing:hud-bite"), cx, baseY, 24, 1, 1, 1, 1, true);
+                            }
+                        }
+                        break;
+                    }
                 case FishingPhase.Waiting:
                     {
                         int dots = (int)(time * 2.5f) % 4;
@@ -551,6 +573,24 @@ namespace AnglersArtOfFishing
             double fx = currentFishPos.X;
             double fy = currentFishPos.Y;
             double fz = currentFishPos.Z;
+
+            // Make the vanilla bobber entity and the attached rope follow the foaming fish in world
+            if (bobberEntityId != 0)
+            {
+                var bobber = capi.World.GetEntityById(bobberEntityId);
+                if (bobber != null)
+                {
+                    bobber.Pos.SetPos(fx, fy, fz);
+
+                    var cm = capi.ModLoader.GetModSystem<ClothManager>();
+                    var rope = cm?.GetClothSystemAttachedToEntity(bobberEntityId);
+                    if (rope != null)
+                    {
+                        rope.LastPoint.Pos.Set(fx, fy, fz);
+                        rope.CanRip = false;
+                    }
+                }
+            }
 
             // 1. Water Wake & Expanding Surface Foam (continuous trail behind moving fish)
             rippleTimer += dt;

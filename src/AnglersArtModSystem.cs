@@ -15,6 +15,7 @@ namespace AnglersArtOfFishing
         {
             base.Start(api);
             api.RegisterItemClass("AAFItemFishingRod", typeof(ItemFishingRod));
+            VanillaPolePatches.Apply(Mod.Info.ModID);
         }
 
         public override void AssetsLoaded(ICoreAPI api)
@@ -27,16 +28,21 @@ namespace AnglersArtOfFishing
         {
             base.StartServerSide(api);
             Server = new FishingServer(api);
+            var vanillaServer = new VanillaFightServer(api, Server.Channel);
+            Server.VanillaServer = vanillaServer;
+            VanillaPolePatches.Server = vanillaServer;
         }
 
         public override void StartClientSide(ICoreClientAPI api)
         {
             base.StartClientSide(api);
             Client = new FishingClient(api);
+            VanillaPolePatches.Client = Client;
         }
 
         public override void Dispose()
         {
+            VanillaPolePatches.Remove();
             Client?.Dispose();
             base.Dispose();
         }

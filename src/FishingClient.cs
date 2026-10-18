@@ -414,16 +414,16 @@ namespace AnglersArtOfFishing
                 // Periodic bite ripple expanding at the bobber
                 var ripple = new SimpleParticleProperties(
                     1f, 2f,
-                    ColorUtil.ToRgba(160, 220, 240, 255),
-                    new Vec3d(baseBobber.X - 0.22, baseBobber.Y + 0.02, baseBobber.Z - 0.22),
-                    new Vec3d(baseBobber.X + 0.22, baseBobber.Y + 0.04, baseBobber.Z + 0.22),
-                    new Vec3f(-0.08f, 0.01f, -0.08f),
-                    new Vec3f(0.08f, 0.03f, 0.08f),
-                    0.55f, 0f, 0.15f, 0.35f, EnumParticleModel.Quad
+                    ColorUtil.ToRgba(200, 235, 248, 255),
+                    new Vec3d(baseBobber.X - 0.08, baseBobber.Y + 0.02, baseBobber.Z - 0.08),
+                    new Vec3d(baseBobber.X + 0.08, baseBobber.Y + 0.04, baseBobber.Z + 0.08),
+                    new Vec3f(-0.03f, 0.01f, -0.03f),
+                    new Vec3f(0.03f, 0.02f, 0.03f),
+                    0.45f, 0f, 0.06f, 0.12f, EnumParticleModel.Quad
                 );
                 ripple.ShouldSwimOnLiquid = true;
                 ripple.OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, -200f);
-                ripple.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.28f);
+                ripple.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.06f);
                 capi.World.SpawnParticles(ripple);
 
                 // Small sharp tug splash
@@ -532,16 +532,16 @@ namespace AnglersArtOfFishing
                 rippleTimer = 0f;
                 var foam = new SimpleParticleProperties(
                     1f, 2f,
-                    ColorUtil.ToRgba(175, 225, 242, 255),
-                    new Vec3d(fx - 0.22, fy + 0.02, fz - 0.22),
-                    new Vec3d(fx + 0.22, fy + 0.04, fz + 0.22),
-                    new Vec3f(-0.1f, 0.01f, -0.1f),
-                    new Vec3f(0.1f, 0.03f, 0.1f),
-                    0.65f, 0f, 0.18f, 0.36f, EnumParticleModel.Quad
+                    ColorUtil.ToRgba(215, 240, 252, 255),
+                    new Vec3d(fx - 0.07, fy + 0.02, fz - 0.07),
+                    new Vec3d(fx + 0.07, fy + 0.04, fz + 0.07),
+                    new Vec3f(-0.03f, 0.01f, -0.03f),
+                    new Vec3f(0.03f, 0.02f, 0.03f),
+                    0.48f, 0f, 0.05f, 0.11f, EnumParticleModel.Quad
                 );
                 foam.ShouldSwimOnLiquid = true;
                 foam.OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, -220f);
-                foam.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.32f);
+                foam.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.05f);
                 capi.World.SpawnParticles(foam);
             }
 
@@ -552,12 +552,12 @@ namespace AnglersArtOfFishing
                 shadowTimer = 0f;
                 var shadow = new SimpleParticleProperties(
                     1f, 1f,
-                    ColorUtil.ToRgba(135, 28, 52, 62),
-                    new Vec3d(fx - 0.16, fy - 0.03, fz - 0.16),
-                    new Vec3d(fx + 0.16, fy - 0.01, fz + 0.16),
-                    new Vec3f(-0.03f, 0f, -0.03f),
-                    new Vec3f(0.03f, 0f, 0.03f),
-                    0.32f, 0f, 0.24f, 0.42f, EnumParticleModel.Quad
+                    ColorUtil.ToRgba(140, 25, 45, 55),
+                    new Vec3d(fx - 0.08, fy - 0.03, fz - 0.08),
+                    new Vec3d(fx + 0.08, fy - 0.01, fz + 0.08),
+                    new Vec3f(-0.02f, 0f, -0.02f),
+                    new Vec3f(0.02f, 0f, 0.02f),
+                    0.28f, 0f, 0.09f, 0.16f, EnumParticleModel.Quad
                 );
                 shadow.ShouldSwimOnLiquid = true;
                 shadow.OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, -180f);
@@ -679,16 +679,16 @@ namespace AnglersArtOfFishing
 
                 var foam = new SimpleParticleProperties(
                     3f, 6f,
-                    ColorUtil.ToRgba(180, 230, 245, 255),
-                    new Vec3d(fx - 0.35, fy + 0.02, fz - 0.35),
-                    new Vec3d(fx + 0.35, fy + 0.04, fz + 0.35),
-                    new Vec3f(-0.15f, 0.01f, -0.15f),
-                    new Vec3f(0.15f, 0.04f, 0.15f),
-                    0.8f, 0f, 0.2f, 0.5f, EnumParticleModel.Quad
+                    ColorUtil.ToRgba(215, 240, 250, 255),
+                    new Vec3d(fx - 0.14, fy + 0.02, fz - 0.14),
+                    new Vec3d(fx + 0.14, fy + 0.04, fz + 0.14),
+                    new Vec3f(-0.05f, 0.01f, -0.05f),
+                    new Vec3f(0.05f, 0.03f, 0.05f),
+                    0.5f, 0f, 0.07f, 0.14f, EnumParticleModel.Quad
                 );
                 foam.ShouldSwimOnLiquid = true;
                 foam.OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, -200f);
-                foam.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.4f);
+                foam.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.08f);
                 capi.World.SpawnParticles(foam);
 
                 capi.World.PlaySoundAt(new AssetLocation("game:sounds/player/swim"), fx, fy, fz, null, true, 22f, 0.85f);

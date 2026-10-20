@@ -297,7 +297,6 @@ namespace AnglersArtOfFishing
                 }
             }
 
-            Text(speciesName, cx, yT - 52 * s, 15, 0.82, 0.90, 1.0, 0.85, true);
             Text(status, cx, yT - 30 * s, 22, sr, sg, sb, 1, true);
 
             // ---------------- Single Horizontal Tension Bar

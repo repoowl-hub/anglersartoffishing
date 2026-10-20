@@ -11,7 +11,7 @@
       "baitTag": "bait-meat",
       "baitType": "spinner",
       "biteSpeed": 1.5,
-      "consumeChance": 0.25
+      "consumeChance": 0.05
     }
   },
   "texture": { "base": "item/bait-{type}" },

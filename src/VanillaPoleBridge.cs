@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using HarmonyLib;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
@@ -172,31 +173,72 @@ namespace AnglersArtOfFishing
         public bool IsFighting(IServerPlayer player) => sessions.ContainsKey(player.PlayerUID);
         public bool IsFrozen(long bobberId) => frozen.Contains(bobberId);
 
+        static readonly MethodInfo GetRandomFishMethod =
+            AccessTools.Method(typeof(EntityBobber), "getRandomFishEntityProperties", new[] { typeof(ItemStack), typeof(float).MakeByRefType(), typeof(bool) });
+
         public bool TryStartFight(IServerPlayer player, ItemSlot slot, EntityBobber bobber)
         {
             if (slot.Itemstack?.Collectible is not ItemFishingPole) return false;
 
-            // ---- what's on the hook (loot itself is still rolled by vanilla TryCatchFish on landing)
+            // ---- what's on the hook: resolve exact species from SpeciesRegistry (loaded from species.json)
             string name;
             float power, stamina, aggression;
-            if (bobber.caughtFish != null && bobber.caughtFish.Alive)
-            {
-                bool juvenile = bobber.caughtFish.Code.Path.Contains("juvenile");
-                name = bobber.caughtFish.GetName();
-                power = juvenile ? 0.3f : 0.6f + 0.2f * (float)rand.NextDouble();
-            }
-            else if (VanillaPolePatches.IsJunk(bobber))
+            float minSeconds;
+
+            if (VanillaPolePatches.IsJunk(bobber))
             {
                 name = Lang.Get("anglersartoffishing:vanilla-snag");
                 power = 0.12f;
+                stamina = 5.0f;
+                aggression = 0.10f;
+                minSeconds = 2.5f;
             }
             else
             {
-                name = Lang.Get("anglersartoffishing:vanilla-fish");
-                power = 0.25f + 0.5f * (float)rand.NextDouble();
+                EntityProperties entityProps = null;
+                bool juvenile = false;
+
+                if (bobber.caughtFish != null && bobber.caughtFish.Alive)
+                {
+                    entityProps = bobber.caughtFish.Properties;
+                    juvenile = bobber.caughtFish.Code.Path.Contains("juvenile");
+                }
+                else
+                {
+                    try
+                    {
+                        object[] args = new object[] { bobber.BaitStack, 0f, false };
+                        entityProps = GetRandomFishMethod?.Invoke(bobber, args) as EntityProperties;
+                    }
+                    catch { }
+                }
+
+                string entityCode = entityProps?.Code?.Path;
+                FishSpecies match = null;
+                if (!string.IsNullOrEmpty(entityCode))
+                {
+                    match = SpeciesRegistry.All.Find(s =>
+                        entityCode.Contains(s.Code) ||
+                        (s.CatchItem != null && s.CatchItem.Contains(entityCode.Replace("fish-", "fishraw-"))));
+                }
+
+                if (match != null)
+                {
+                    name = match.Name + (juvenile ? " (Juvenile)" : "");
+                    power = juvenile ? match.Power * 0.65f : match.Power;
+                    stamina = juvenile ? match.StaminaSeconds * 0.65f : match.StaminaSeconds;
+                    aggression = match.Aggression;
+                    minSeconds = juvenile ? match.MinFightSeconds * 0.65f : match.MinFightSeconds;
+                }
+                else
+                {
+                    name = bobber.caughtFish?.GetName() ?? Lang.Get("anglersartoffishing:vanilla-fish");
+                    power = 0.35f + 0.35f * (float)rand.NextDouble();
+                    stamina = 6f + 14f * power;
+                    aggression = 0.2f + 0.5f * power;
+                    minSeconds = 2.5f + 4f * power;
+                }
             }
-            stamina = 6f + 14f * power;
-            aggression = 0.15f + 0.6f * power;
 
             // ---- fixed drag per pole tier
             bool bamboo = slot.Itemstack.Collectible.Variant["material"] == "bamboo";
@@ -215,7 +257,7 @@ namespace AnglersArtOfFishing
             {
                 BobberId = bobber.EntityId,
                 Start = sapi.World.ElapsedMilliseconds,
-                MinSeconds = 2.5f + 4f * power,
+                MinSeconds = minSeconds,
                 Name = name
             };
 

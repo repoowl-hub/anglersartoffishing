@@ -1,35 +1,5 @@
 [
   {
-    "ingredientPattern": "S_T,_ST,S_T",
-    "width": 3,
-    "height": 3,
-    "ingredients": {
-      "S": { "type": "item", "code": "game:stick" },
-      "T": { "type": "item", "code": "game:flaxtwine" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:fishingrod-crude" }
-  },
-  {
-    "ingredientPattern": "_IR,_RI,R__",
-    "width": 3,
-    "height": 3,
-    "ingredients": {
-      "R": { "type": "item", "code": "anglersartoffishing:fishingrod-crude", "isTool": false },
-      "I": { "type": "item", "code": "game:ingot-copper" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:fishingrod-sturdy" }
-  },
-  {
-    "ingredientPattern": "_II,_RI,R__",
-    "width": 3,
-    "height": 3,
-    "ingredients": {
-      "R": { "type": "item", "code": "anglersartoffishing:fishingrod-sturdy" },
-      "I": { "type": "item", "code": "game:ingot-iron" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:fishingrod-master" }
-  },
-  {
     "ingredientPattern": "R",
     "width": 1,
     "height": 1,

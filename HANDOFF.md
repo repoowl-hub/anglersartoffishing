@@ -25,14 +25,12 @@ A streamlined, immersive fishing minigame inspired by *Fishing Planet*: cast, ho
 | `src/FishingData.cs` | `FishSpecies` + `SpeciesRegistry` (loads `config/species.json`, `Roll()` filters by rod strength + bait), ProtoBuf packets `FishingStatePacket` (server→client) and `FishingActionPacket` (client→server). |
 | `src/FishingServer.cs` | Sessions per player: cast (water raycast), bait check, bite timer, bite window, starts fight, validates result (min fight time), gives catch, damages rod, consumes bait. |
 | `src/FishingClient.cs` | Dual renderer: `BobberMotionRenderer` (`EnumRenderStage.Before` order 0.95) runs the fight sim and positions the bobber (Y tension dive, thrash, yaw, pitch, roll) and rope line end in 3D, and handles physical bite dipping; `FishingClient` (`EnumRenderStage.Ortho`) draws sleek single Horizontal Tension Bar HUD with digital distance counter. Diegetic bite cue: bobber plunges underwater with splash sound/ripples (no exclamation mark HUD clutter). |
-| `src/VanillaPoleBridge.cs` | Harmony bridge (`VanillaPolePatches` + `VanillaFightServer`) hooking the vanilla `ItemFishingPole`. Seamlessly takes over when a fish bites, freezes bobber bite expiration during fight, routes loot through vanilla `TryCatchFish` on landing, and clears catch on line snap/escape. |
-| `src/ItemFishingRod.cs` | Item class `AAFItemFishingRod`; right-click forwards to server/client systems. |
-| `src/AnglersArtModSystem.cs` | Registers item class, loads species (server), creates `FishingServer`/`FishingClient`, applies and unpatches Harmony hooks. |
-| `assets/anglersartoffishing/` | `itemtypes/fishingrod.json`, `itemtypes/bait.json`, `config/species.json`, `recipes/grid/fishing.json`, `lang/en.json`, textures. |
+| `src/VanillaPoleBridge.cs` | Harmony bridge (`VanillaPolePatches` + `VanillaFightServer`) hooking the vanilla `ItemFishingPole` (wood and bamboo). Seamlessly takes over when a fish bites, freezes bobber bite expiration during fight, routes loot through vanilla `TryCatchFish` on landing (rewarding authentic vanilla whole fish `game:fishraw-...`), and clears catch on line snap/escape. |
+| `src/ItemFishingRod.cs` | Item class `AAFItemFishingRod` preserved for future powerful rod extensions; unhooked from active registration. |
+| `src/AnglersArtModSystem.cs` | Loads species (server), initializes `FishingServer`/`FishingClient`, applies and unpatches Harmony hooks into vanilla poles. |
+| `assets/anglersartoffishing/` | `itemtypes/bait.json` (with `isFishBait` & `baitTag` for vanilla poles), `config/species.json` (vanilla whole fish `fishraw-...`), `recipes/grid/fishing.json` (bait crafting recipes), `lang/en.json`, textures. |
 
-Flow (Custom Rod): right-click water with bait in off-hand → server Waiting → Bite (bobber physically plunges under water with ripples and splash) → right-click hooks fish → Fight (client sim with single tension bar) → client sends result → server verifies and rewards.
-
-Flow (Vanilla Pole Hook): right-click casts vanilla bobber + rope → vanilla waits for bite → on bite, vanilla splash plays and bobber physically plunges under water → right-click hooks fish → custom fight takes over (bobber & rope dance across the water in 3D following foaming fish) → on landing, vanilla `TryCatchFish` rewards the catch naturally; on snap/escape, catch is cleared and pole damaged.
+Flow (Vanilla Pole Hook): right-click casts vanilla bobber + rope → vanilla waits for bite → on bite, vanilla splash plays and bobber physically plunges under water → right-click hooks fish → custom fight takes over (bobber & rope dance across the water in 3D following foaming fish) → on landing, vanilla `TryCatchFish` rewards the catch naturally (authentic whole fish); on snap/escape, catch is cleared and pole damaged. Custom rods are omitted to keep the experience completely focused on vanilla poles.
 
 ## Mechanics Details (Fishing Planet Style)
 - **Single Horizontal Tension Bar**:

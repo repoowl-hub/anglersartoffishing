@@ -33,7 +33,7 @@ namespace AnglersArtOfFishing
 
         static readonly AccessTools.FieldRef<EntityBobber, float> CatchAccum =
             AccessTools.FieldRefAccess<EntityBobber, float>("catchAccum");
-        static readonly AccessTools.FieldRef<EntityBobber, EnumBobberState> BobberState =
+        public static readonly AccessTools.FieldRef<EntityBobber, EnumBobberState> BobberState =
             AccessTools.FieldRefAccess<EntityBobber, EnumBobberState>("bobberState");
 
         public static void Apply(string harmonyId)
@@ -260,7 +260,26 @@ namespace AnglersArtOfFishing
             frozen.Remove(s.BobberId);
 
             var bobber = sapi.World.GetEntityById(s.BobberId) as EntityBobber;
-            if (outcome != 2 && bobber != null) VanillaPolePatches.ClearCatch(bobber);
+            if (outcome != 2 && bobber != null)
+            {
+                VanillaPolePatches.ClearCatch(bobber);
+            }
+            else if (outcome == 2 && bobber != null && VanillaPolePatches.BobberState(bobber) == EnumBobberState.NoEntityFishCatch)
+            {
+                // Fallback for flat/test worlds or regions where vanilla climate spawn maps lack native fish
+                if (!bobber.HasCatchable(bobber.BaitStack, out _))
+                {
+                    var fallbackFish = sapi.World.GetItem(new AssetLocation("game:fishraw-freshwater-trout-rainbow-adult"));
+                    if (fallbackFish != null)
+                    {
+                        var fallbackStack = new ItemStack(fallbackFish, 1);
+                        if (!player.InventoryManager.TryGiveItemstack(fallbackStack, true))
+                        {
+                            sapi.World.SpawnItemEntity(fallbackStack, player.Entity.Pos.XYZ);
+                        }
+                    }
+                }
+            }
 
             // Vanilla cleanup: TryCatchFish (loot on success, nothing after ClearCatch), bobber death, rope removal
             var slot = player.InventoryManager.ActiveHotbarSlot;
@@ -268,6 +287,7 @@ namespace AnglersArtOfFishing
             {
                 if (pole.StopFishing(slot.Itemstack, player.Entity)) slot.MarkDirty();
                 if (outcome == 1) pole.DamageItem(sapi.World, player.Entity, slot, 2);
+                else if (outcome == 2) pole.DamageItem(sapi.World, player.Entity, slot, 1);
             }
             else
             {

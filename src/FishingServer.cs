@@ -271,7 +271,21 @@ namespace AnglersArtOfFishing
         void Land(IServerPlayer player, Session s)
         {
             var sp = s.Species;
-            Item item = sapi.World.GetItem(new AssetLocation(sp.CatchItem)) ?? sapi.World.GetItem(new AssetLocation("game:fish-raw"));
+            string catchCode = sp.CatchItem;
+            if (s.SizeFactor < 0.35f && catchCode != null && catchCode.EndsWith("-adult"))
+            {
+                string juvCode = catchCode.Substring(0, catchCode.Length - 5) + "juvenile";
+                if (sapi.World.GetItem(new AssetLocation(juvCode)) != null)
+                {
+                    catchCode = juvCode;
+                }
+            }
+
+            Item item = (catchCode != null ? sapi.World.GetItem(new AssetLocation(catchCode)) : null)
+                     ?? (sp.CatchItem != null ? sapi.World.GetItem(new AssetLocation(sp.CatchItem)) : null)
+                     ?? sapi.World.GetItem(new AssetLocation("game:fishraw-freshwater-trout-rainbow-adult"))
+                     ?? sapi.World.GetItem(new AssetLocation("game:fish-raw"));
+
             if (item == null)
             {
                 sapi.Logger.Error("[AnglersArtOfFishing] Catch item '{0}' does not exist", sp.CatchItem);
@@ -279,7 +293,7 @@ namespace AnglersArtOfFishing
                 return;
             }
 
-            int qty = Math.Max(1, (int)Math.Round(sp.BaseQuantity * (0.6f + 0.8f * s.SizeFactor)));
+            int qty = Math.Max(1, sp.BaseQuantity);
             var stack = new ItemStack(item, qty);
             stack.Attributes.SetFloat("fishSizeCm", s.SizeCm);
             stack.Attributes.SetString("fishSpecies", sp.Code);

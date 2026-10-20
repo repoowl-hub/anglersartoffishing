@@ -14,7 +14,6 @@ namespace AnglersArtOfFishing
         public override void Start(ICoreAPI api)
         {
             base.Start(api);
-            api.RegisterItemClass("AAFItemFishingRod", typeof(ItemFishingRod));
             VanillaPolePatches.Apply(Mod.Info.ModID);
         }
 

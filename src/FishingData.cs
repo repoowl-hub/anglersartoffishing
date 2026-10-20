@@ -27,7 +27,7 @@ namespace AnglersArtOfFishing
         public float Aggression { get; set; } = 0.4f;
         /// <summary>Server-side sanity check: a fight can't legitimately end faster than this.</summary>
         public float MinFightSeconds { get; set; } = 6f;
-        public string CatchItem { get; set; } = "game:fish-raw";
+        public string CatchItem { get; set; } = "game:fishraw-freshwater-trout-rainbow-adult";
         public int BaseQuantity { get; set; } = 1;
     }
 

@@ -1,21 +1,21 @@
 [
   {
     "Code": "minnow", "Name": "Minnow", "MinRodStrength": 1, "Weight": 3.0,
-    "Baits": { "grain": 3, "worm": 1.5 },
+    "Baits": { "dough": 3, "worm": 1.5 },
     "MinSizeCm": 6, "MaxSizeCm": 12, "Power": 0.10, "StaminaSeconds": 5, "Aggression": 0.20,
     "MinFightSeconds": 3, "BaseQuantity": 1,
     "CatchItem": "game:fishraw-freshwater-chub-river-adult"
   },
   {
     "Code": "perch", "Name": "Perch", "MinRodStrength": 1, "Weight": 2.5,
-    "Baits": { "worm": 3, "grain": 1, "fishscrap": 1 },
+    "Baits": { "worm": 3, "dough": 1, "meat": 1 },
     "MinSizeCm": 15, "MaxSizeCm": 40, "Power": 0.22, "StaminaSeconds": 7, "Aggression": 0.35,
     "MinFightSeconds": 4, "BaseQuantity": 1,
     "CatchItem": "game:fishraw-freshwater-perch-yellow-adult"
   },
   {
     "Code": "carp", "Name": "Carp", "MinRodStrength": 2, "Weight": 2.0,
-    "Baits": { "grain": 3, "worm": 1 },
+    "Baits": { "dough": 3, "worm": 1 },
     "MinSizeCm": 30, "MaxSizeCm": 80, "Power": 0.35, "StaminaSeconds": 11, "Aggression": 0.25,
     "MinFightSeconds": 6, "BaseQuantity": 1,
     "CatchItem": "game:fishraw-freshwater-carp-common-adult"
@@ -29,42 +29,42 @@
   },
   {
     "Code": "bass", "Name": "Largemouth Bass", "MinRodStrength": 2, "Weight": 1.8,
-    "Baits": { "worm": 2.5, "grain": 1.0, "spinner": 2.0 },
+    "Baits": { "worm": 2.5, "dough": 1.0, "spinner": 2.0 },
     "MinSizeCm": 20, "MaxSizeCm": 60, "Power": 0.38, "StaminaSeconds": 10, "Aggression": 0.45,
     "MinFightSeconds": 6, "BaseQuantity": 1,
     "CatchItem": "game:fishraw-freshwater-bass-largemouth-adult"
   },
   {
     "Code": "salmon", "Name": "Silver Salmon", "MinRodStrength": 2, "Weight": 1.5,
-    "Baits": { "spinner": 3, "worm": 2, "fishscrap": 1.5 },
+    "Baits": { "spinner": 3, "worm": 2, "meat": 1.5 },
     "MinSizeCm": 40, "MaxSizeCm": 95, "Power": 0.48, "StaminaSeconds": 13, "Aggression": 0.60,
     "MinFightSeconds": 7, "BaseQuantity": 1,
     "CatchItem": "game:fishraw-freshwater-salmon-coho-adult"
   },
   {
     "Code": "pike", "Name": "Northern Pike", "MinRodStrength": 2, "Weight": 1.2,
-    "Baits": { "fishscrap": 3, "spinner": 2 },
+    "Baits": { "meat": 3, "spinner": 2 },
     "MinSizeCm": 45, "MaxSizeCm": 110, "Power": 0.50, "StaminaSeconds": 12, "Aggression": 0.65,
     "MinFightSeconds": 7, "BaseQuantity": 1,
     "CatchItem": "game:fishraw-freshwater-pike-northern-adult"
   },
   {
     "Code": "catfish", "Name": "Catfish", "MinRodStrength": 3, "Weight": 1.0,
-    "Baits": { "fishscrap": 3, "worm": 1.5 },
+    "Baits": { "meat": 3, "worm": 1.5 },
     "MinSizeCm": 60, "MaxSizeCm": 150, "Power": 0.58, "StaminaSeconds": 16, "Aggression": 0.40,
     "MinFightSeconds": 10, "BaseQuantity": 1,
     "CatchItem": "game:fishraw-freshwater-catfish-channel-adult"
   },
   {
     "Code": "sturgeon", "Name": "Sturgeon", "MinRodStrength": 3, "Weight": 0.6,
-    "Baits": { "fishscrap": 2, "grain": 1 },
+    "Baits": { "meat": 2, "dough": 1 },
     "MinSizeCm": 90, "MaxSizeCm": 220, "Power": 0.68, "StaminaSeconds": 20, "Aggression": 0.50,
     "MinFightSeconds": 12, "BaseQuantity": 1,
     "CatchItem": "game:fishraw-saltwater-sturgeon-atlantic-adult"
   },
   {
     "Code": "taimen", "Name": "Great Taimen", "MinRodStrength": 3, "Weight": 0.4,
-    "Baits": { "spinner": 3, "fishscrap": 1 },
+    "Baits": { "spinner": 3, "meat": 1 },
     "MinSizeCm": 100, "MaxSizeCm": 200, "Power": 0.75, "StaminaSeconds": 20, "Aggression": 0.75,
     "MinFightSeconds": 12, "BaseQuantity": 1,
     "CatchItem": "game:fishraw-freshwater-sheatfish-black-adult"

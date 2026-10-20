@@ -3,14 +3,17 @@
   "maxstacksize": 32,
   "storageFlags": 257,
   "variantgroups": [
-    { "code": "type", "states": [ "worm", "grain", "fishscrap", "spinner" ] }
+    { "code": "type", "states": [ "spinner" ] }
   ],
   "attributesByType": {
-    "*-worm": { "isFishBait": true, "baitTag": "bait-worm", "baitType": "worm", "biteSpeed": 1.0, "consumeChance": 1.0 },
-    "*-grain": { "isFishBait": true, "baitTag": "bait-stinkdough", "baitType": "grain", "biteSpeed": 0.85, "consumeChance": 1.0 },
-    "*-fishscrap": { "isFishBait": true, "baitTag": "bait-fishtiny", "baitType": "fishscrap", "biteSpeed": 1.2, "consumeChance": 1.0 },
-    "*-spinner": { "isFishBait": true, "baitTag": "bait-fishsmall", "baitType": "spinner", "biteSpeed": 1.5, "consumeChance": 0.25 }
+    "*-spinner": {
+      "isFishBait": true,
+      "baitTag": "bait-meat",
+      "baitType": "spinner",
+      "biteSpeed": 1.5,
+      "consumeChance": 0.25
+    }
   },
   "texture": { "base": "item/bait-{type}" },
-  "creativeinventory": { "general": [ "*" ], "items": [ "*" ] }
+  "creativeinventory": { "general": [ "*" ], "items": [ "*" ], "tools": [ "*" ] }
 }

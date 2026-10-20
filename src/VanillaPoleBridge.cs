@@ -281,11 +281,27 @@ namespace AnglersArtOfFishing
                 }
             }
 
+            // Check if bait should be preserved (e.g. reusable spinner lure with consumeChance < 1)
+            ItemStack savedBait = null;
+            if (outcome == 2 && bobber?.BaitStack != null)
+            {
+                float consumeChance = bobber.BaitStack.Collectible.Attributes?["consumeChance"].AsFloat(1f) ?? 1f;
+                if (consumeChance < 1f && rand.NextDouble() > consumeChance)
+                {
+                    savedBait = bobber.BaitStack.Clone();
+                }
+            }
+
             // Vanilla cleanup: TryCatchFish (loot on success, nothing after ClearCatch), bobber death, rope removal
             var slot = player.InventoryManager.ActiveHotbarSlot;
             if (slot?.Itemstack?.Collectible is ItemFishingPole pole && slot.Itemstack.Attributes.GetLong("bobberEntityId", 0) == s.BobberId)
             {
                 if (pole.StopFishing(slot.Itemstack, player.Entity)) slot.MarkDirty();
+                if (savedBait != null)
+                {
+                    slot.Itemstack.Attributes.SetItemstack("fishingBait", savedBait);
+                    slot.MarkDirty();
+                }
                 if (outcome == 1) pole.DamageItem(sapi.World, player.Entity, slot, 2);
                 else if (outcome == 2) pole.DamageItem(sapi.World, player.Entity, slot, 1);
             }

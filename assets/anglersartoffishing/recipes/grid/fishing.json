@@ -1,32 +1,5 @@
 [
   {
-    "ingredientPattern": "R",
-    "width": 1,
-    "height": 1,
-    "ingredients": {
-      "R": { "type": "item", "code": "game:rot" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:bait-worm", "quantity": 2 }
-  },
-  {
-    "ingredientPattern": "G",
-    "width": 1,
-    "height": 1,
-    "ingredients": {
-      "G": { "type": "item", "code": "game:grain-*" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:bait-grain", "quantity": 2 }
-  },
-  {
-    "ingredientPattern": "F",
-    "width": 1,
-    "height": 1,
-    "ingredients": {
-      "F": { "type": "item", "code": "game:fish-raw" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:bait-fishscrap", "quantity": 4 }
-  },
-  {
     "ingredientPattern": "I,T",
     "width": 1,
     "height": 2,

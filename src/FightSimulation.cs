@@ -198,16 +198,16 @@ namespace AnglersArtOfFishing
         {
             float target = Behaviour switch
             {
-                FishBehaviour.Swim => 0.28f,
-                FishBehaviour.Windup => 0.18f + 0.25f * (behaviourTimer / WindupSeconds), // building pre-dash tension
+                FishBehaviour.Swim => 0.26f,
+                FishBehaviour.Windup => 0.18f + 0.32f * (behaviourTimer / WindupSeconds), // building pre-dash tension
                 FishBehaviour.Dash => 1.0f,
-                FishBehaviour.Recover => 0.32f,
-                FishBehaviour.Tired => 0.05f,
+                FishBehaviour.Recover => 0.28f,
+                FishBehaviour.Tired => 0.04f,
                 _ => 0.25f
             };
 
-            // Fast attack, smooth release = sudden jerk on dash, then eases off
-            float k = target > PullNow ? 12f : 4f;
+            // Fast attack on dash so tension surges rapidly; smooth release
+            float k = target > PullNow ? 16f : 5f;
             PullNow += (target - PullNow) * (1f - MathF.Exp(-k * dt));
         }
 
@@ -225,11 +225,12 @@ namespace AnglersArtOfFishing
             float pull = PullLoad();
 
             // When reeling: line winches tight against pull + reel gear tension.
-            // When not reeling: reel drag lets line slip, reducing tension.
+            // When not reeling: reel drag lets line slip, dropping tension safely.
             float reelLoad = Reeling ? (ReelTension * p.ReelSpeed * tired) : 0f;
-            float target = BaseTension + pull * (Reeling ? 0.90f : 0.42f) + reelLoad;
+            float target = BaseTension + pull * (Reeling ? 0.95f : 0.40f) + reelLoad;
 
-            float k = target > Tension ? 9f : 14f;
+            // Very responsive tension rise on reeling/surges (k = 18f), fast drop on reel release (k = 14f)
+            float k = target > Tension ? 18f : 14f;
             Tension += (target - Tension) * (1f - MathF.Exp(-k * dt));
             Tension = Math.Clamp(Tension, 0f, 1.05f);
         }

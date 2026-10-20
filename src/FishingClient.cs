@@ -255,91 +255,68 @@ namespace AnglersArtOfFishing
             float x0 = cx - barW / 2 + shake;
             float yT = baseY;
 
-            // ---------------- Species & Dynamic Status Feedback
-            string status;
-            double sr = 1, sg = 1, sb = 1;
-            if (danger > 0.08f)
+            // ---------------- Horizontal Continuous Gradient Tension Bar (Fishing Planet Style)
+            // Outer bezel frame
+            Rect(x0 - 3 * s, yT - 3 * s, barW + 6 * s, barH + 6 * s, 0.03f, 0.04f, 0.06f, 0.92f);
+            Rect(x0 - 1 * s, yT - 1 * s, barW + 2 * s, barH + 2 * s, 0.18f, 0.22f, 0.28f, 0.60f);
+
+            // Dark glass track slot
+            Rect(x0, yT, barW, barH, 0.05f, 0.06f, 0.08f, 0.95f);
+
+            // Faint backplate gradient underlay (shows the gauge spectrum faintly at 14% opacity)
+            int bgSlices = 70;
+            float sliceW = (barW - 2 * s) / bgSlices;
+            for (int i = 0; i < bgSlices; i++)
             {
-                status = "[! OVERLOAD - RELEASE REEL !]";
-                sr = 1.0; sg = 0.25; sb = 0.2;
-            }
-            else if (sim.Behaviour == FishBehaviour.Dash)
-            {
-                status = $"[! {Lang.Get("anglersartoffishing:hud-dash")} !]";
-                sr = 1.0; sg = 0.35; sb = 0.25;
-            }
-            else if (sim.Behaviour == FishBehaviour.Windup)
-            {
-                status = $"[ {Lang.Get("anglersartoffishing:hud-windup")} ]";
-                sr = 1.0; sg = 0.85; sb = 0.3;
-            }
-            else if (sim.Behaviour == FishBehaviour.Tired)
-            {
-                status = $"[ {Lang.Get("anglersartoffishing:hud-tired")} ]";
-                sr = 0.35; sg = 1.0; sb = 0.5;
-            }
-            else if (sim.Behaviour == FishBehaviour.Recover)
-            {
-                status = $"[ {Lang.Get("anglersartoffishing:hud-recover")} ]";
-                sr = 0.65; sg = 0.95; sb = 0.8;
-            }
-            else
-            {
-                if (sim.Reeling)
-                {
-                    status = "[ Reeling In ]";
-                    sr = 0.75; sg = 0.95; sb = 1.0;
-                }
-                else
-                {
-                    status = $"[ {Lang.Get("anglersartoffishing:hud-swim")} ]";
-                    sr = 0.75; sg = 0.85; sb = 0.95;
-                }
+                float u = (i + 0.5f) / bgSlices;
+                GetTensionGradientColor(u, out float ur, out float ug, out float ub);
+                Rect(x0 + 1 * s + i * sliceW, yT + 1 * s, sliceW + 0.5f, barH - 2 * s, ur, ug, ub, 0.14f);
             }
 
-            Text(status, cx, yT - 30 * s, 22, sr, sg, sb, 1, true);
-
-            // ---------------- Single Horizontal Tension Bar
-            // Outer frame
-            Rect(x0 - 4 * s, yT - 4 * s, barW + 8 * s, barH + 8 * s, 0.04f, 0.05f, 0.07f, 0.88f);
-            // Slot track
-            Rect(x0, yT, barW, barH, 0.10f, 0.12f, 0.15f, 0.95f);
-
-            // Zone underlays
-            // Slack zone (0.0 to 0.14)
-            Rect(x0, yT, barW * 0.14f, barH, 0.20f, 0.50f, 0.85f, 0.22f);
-            // Safe fight zone (0.25 to 0.85)
-            Rect(x0 + barW * FightSimulation.SweetMin, yT, barW * (FightSimulation.SweetMax - FightSimulation.SweetMin), barH, 0.25f, 0.85f, 0.40f, 0.20f);
-            // Danger snap zone (0.88 to 1.00)
-            Rect(x0 + barW * FightSimulation.DangerStart, yT, barW * (1f - FightSimulation.DangerStart), barH, 0.95f, 0.18f, 0.18f, 0.35f);
-
-            // Subtle zone tick dividers
-            Rect(x0 + barW * FightSimulation.SweetMin - 1 * s, yT, 2 * s, barH, 1f, 1f, 1f, 0.22f);
-            Rect(x0 + barW * FightSimulation.DangerStart - 1 * s, yT, 2 * s, barH, 1f, 0.35f, 0.35f, 0.35f);
-
-            // Fill
+            // Continuous active tension fill
             float t = Math.Clamp(dispTension, 0f, 1f);
-            GetTensionColor(t, out float fr, out float fg, out float fb);
-            Rect(x0 + 1 * s, yT + 2 * s, (barW - 2 * s) * t, barH - 4 * s, fr, fg, fb, 0.95f);
+            float fillW = (barW - 2 * s) * t;
+            if (fillW > 0.5f)
+            {
+                int fillSlices = Math.Max(2, (int)(bgSlices * t));
+                float fSliceW = fillW / fillSlices;
+                for (int i = 0; i < fillSlices; i++)
+                {
+                    float u = (i + 0.5f) / bgSlices;
+                    GetTensionGradientColor(u, out float fr, out float fg, out float fb);
+                    Rect(x0 + 1 * s + i * fSliceW, yT + 1 * s, fSliceW + 0.5f, barH - 2 * s, fr, fg, fb, 0.96f);
+                }
 
-            // Needle indicator pip
-            Rect(x0 + barW * t - 1.5f * s, yT - 5 * s, 3 * s, barH + 10 * s, 1f, 1f, 1f, 1f);
+                // Top highlight shine line along active fill for 3D glass sheen
+                Rect(x0 + 1 * s, yT + 1 * s, fillW, 1.5f * s, 1f, 1f, 1f, 0.28f);
+            }
 
-            // Red overload pulsing border
+            // Leading indicator needle pip
+            float needleX = x0 + 1 * s + fillW;
+            GetTensionGradientColor(t, out float nr, out float ng, out float nb);
+            // Outer needle shadow
+            Rect(needleX - 2.5f * s, yT - 4 * s, 5 * s, barH + 8 * s, 0.02f, 0.03f, 0.05f, 0.70f);
+            // Tinted pip
+            Rect(needleX - 1.5f * s, yT - 3 * s, 3 * s, barH + 6 * s, nr, ng, nb, 0.85f);
+            // Crisp white core
+            Rect(needleX - 0.75f * s, yT - 2 * s, 1.5f * s, barH + 4 * s, 1f, 1f, 1f, 1.0f);
+
+            // Red overload pulsing border (danger > 0.02)
             if (danger > 0.02f)
             {
-                float blink = 0.4f + 0.6f * MathF.Abs(MathF.Sin(time * 16f));
-                Rect(x0 - 4 * s, yT - 4 * s, barW + 8 * s, 3 * s, 1f, 0.15f, 0.15f, danger * blink);
-                Rect(x0 - 4 * s, yT + barH + 1 * s, barW + 8 * s, 3 * s, 1f, 0.15f, 0.15f, danger * blink);
-                Rect(x0 - 4 * s, yT - 4 * s, 3 * s, barH + 8 * s, 1f, 0.15f, 0.15f, danger * blink);
-                Rect(x0 + barW + 1 * s, yT - 4 * s, 3 * s, barH + 8 * s, 1f, 0.15f, 0.15f, danger * blink);
+                float blink = 0.5f + 0.5f * MathF.Abs(MathF.Sin(time * 18f));
+                float da = danger * blink * 0.95f;
+                Rect(x0 - 4 * s, yT - 4 * s, barW + 8 * s, 2.5f * s, 1f, 0.15f, 0.15f, da);
+                Rect(x0 - 4 * s, yT + barH + 1.5f * s, barW + 8 * s, 2.5f * s, 1f, 0.15f, 0.15f, da);
+                Rect(x0 - 4 * s, yT - 4 * s, 2.5f * s, barH + 8 * s, 1f, 0.15f, 0.15f, da);
+                Rect(x0 + barW + 1.5f * s, yT - 4 * s, 2.5f * s, barH + 8 * s, 1f, 0.15f, 0.15f, da);
             }
 
-            // Slack line warning
+            // Slack line warning (if line is left completely loose for too long)
             if (sim.SlackRatio > 0.05f)
             {
                 float slackAlpha = 0.5f + 0.5f * sim.SlackRatio;
-                Text(Lang.Get("anglersartoffishing:hud-slack"), cx, yT - 8 * s, 14, 0.5, 0.8, 1.0, slackAlpha, true);
+                Text(Lang.Get("anglersartoffishing:hud-slack"), cx, yT - 18 * s, 14, 0.5, 0.8, 1.0, slackAlpha, true);
             }
 
             // ---------------- Digital Distance & Controls readout
@@ -358,33 +335,48 @@ namespace AnglersArtOfFishing
             Text(Lang.Get("anglersartoffishing:hud-controls"), cx, yT + barH + 34 * s, 13, 0.80, 0.82, 0.86, 0.65, true);
         }
 
-        static void GetTensionColor(float t, out float r, out float g, out float b)
+        static void GetTensionGradientColor(float u, out float r, out float g, out float b)
         {
-            if (t < 0.14f)
+            u = Math.Clamp(u, 0f, 1f);
+            if (u <= 0.15f)
             {
-                r = 0.30f; g = 0.55f; b = 0.88f;
+                // Deep Blue -> Cyan
+                float k = u / 0.15f;
+                r = 0.12f * (1f - k) + 0.10f * k;
+                g = 0.40f * (1f - k) + 0.78f * k;
+                b = 0.95f * (1f - k) + 0.92f * k;
             }
-            else if (t < FightSimulation.SweetMin)
+            else if (u <= 0.45f)
             {
-                float k = (t - 0.14f) / (FightSimulation.SweetMin - 0.14f);
-                r = 0.30f + 0.02f * k;
-                g = 0.55f + 0.37f * k;
-                b = 0.88f - 0.46f * k;
+                // Cyan -> Emerald Green
+                float k = (u - 0.15f) / 0.30f;
+                r = 0.10f * (1f - k) + 0.18f * k;
+                g = 0.78f * (1f - k) + 0.92f * k;
+                b = 0.92f * (1f - k) + 0.32f * k;
             }
-            else if (t < 0.78f)
+            else if (u <= 0.72f)
             {
-                r = 0.32f; g = 0.92f; b = 0.42f;
+                // Emerald Green -> Rich Golden Yellow (Optimal winching sweet zone)
+                float k = (u - 0.45f) / 0.27f;
+                r = 0.18f * (1f - k) + 0.96f * k;
+                g = 0.92f * (1f - k) + 0.88f * k;
+                b = 0.32f * (1f - k) + 0.10f * k;
             }
-            else if (t < FightSimulation.DangerStart)
+            else if (u <= 0.88f)
             {
-                float k = (t - 0.78f) / (FightSimulation.DangerStart - 0.78f);
-                r = 0.32f + 0.63f * k;
-                g = 0.92f - 0.10f * k;
-                b = 0.42f - 0.17f * k;
+                // Golden Yellow -> Vivid Orange (Heavy strain warning)
+                float k = (u - 0.72f) / 0.16f;
+                r = 0.96f * (1f - k) + 1.00f * k;
+                g = 0.88f * (1f - k) + 0.45f * k;
+                b = 0.10f * (1f - k) + 0.08f * k;
             }
             else
             {
-                r = 1.0f; g = 0.22f; b = 0.18f;
+                // Vivid Orange -> Deep Crimson Red (Overload snap zone)
+                float k = (u - 0.88f) / 0.12f;
+                r = 1.00f;
+                g = 0.45f * (1f - k) + 0.15f * k;
+                b = 0.08f * (1f - k) + 0.15f * k;
             }
         }
 

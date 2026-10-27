@@ -163,10 +163,13 @@ namespace AnglersArtOfFishing
         readonly HashSet<long> frozen = new HashSet<long>();
         readonly Random rand = new Random();
 
-        public VanillaFightServer(ICoreServerAPI api, IServerNetworkChannel channel)
+        public VanillaFightServer(ICoreServerAPI api)
         {
             sapi = api;
-            this.channel = channel;
+            channel = api.Network.RegisterChannel(AnglersArtModSystem.ChannelName)
+                .RegisterMessageType<FishingStatePacket>()
+                .RegisterMessageType<FishingActionPacket>()
+                .SetMessageHandler<FishingActionPacket>((player, packet) => TryHandleAction(player, packet));
             api.Event.RegisterGameTickListener(Tick, 250);
         }
 
@@ -283,7 +286,6 @@ namespace AnglersArtOfFishing
         public bool TryHandleAction(IServerPlayer player, FishingActionPacket packet)
         {
             if (!sessions.TryGetValue(player.PlayerUID, out var s)) return false;
-            if (packet.Action != 1) return true;
 
             float elapsed = (sapi.World.ElapsedMilliseconds - s.Start) / 1000f;
             int outcome = packet.Outcome;
@@ -358,7 +360,7 @@ namespace AnglersArtOfFishing
                 1 => "anglersartoffishing:fishing-snapped",
                 _ => "anglersartoffishing:fishing-escaped"
             };
-            channel.SendPacket(new FishingStatePacket { Phase = (int)FishingPhase.Idle, Message = msg, SpeciesName = s.Name }, player);
+            channel.SendPacket(new FishingStatePacket { Phase = (int)FishingPhase.Idle, Message = msg }, player);
         }
 
         /// <summary>Vanilla StopFishing was triggered from somewhere else mid-fight.</summary>

@@ -30,7 +30,7 @@ namespace AnglersArtOfFishing
         public float StaminaSeconds = 14f;
         /// <summary>0..1 how often the fish bolts.</summary>
         public float Aggression = 0.5f;
-        /// <summary>How many rod-strength tiers above the species requirement (0 = exactly enough).</summary>
+        /// <summary>Pole tier bonus that dampens the fish's pull (0 = wood, 1 = bamboo).</summary>
         public int RodMargin = 0;
         /// <summary>Reel speed multiplier of the rod.</summary>
         public float ReelSpeed = 1f;

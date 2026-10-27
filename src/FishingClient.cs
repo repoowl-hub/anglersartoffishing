@@ -21,9 +21,6 @@ namespace AnglersArtOfFishing
         FishingPhase phase = FishingPhase.Idle;
         FightSimulation sim;
         FightOutcome reported = FightOutcome.None;
-        string speciesName = "";
-        float biteWindow, biteLeft;
-        bool hookSent;
         long bobberEntityId;
 
         public bool InFight => phase == FishingPhase.Fight;
@@ -96,8 +93,7 @@ namespace AnglersArtOfFishing
 
             if (!string.IsNullOrEmpty(p.Message))
             {
-                bool good = p.Message.EndsWith("caught");
-                ShowToast(good ? Lang.Get(p.Message, p.SpeciesName, p.SizeCm.ToString("0")) : Lang.Get(p.Message), good);
+                ShowToast(Lang.Get(p.Message), p.Message.EndsWith("caught"));
             }
 
             switch (newPhase)
@@ -107,20 +103,7 @@ namespace AnglersArtOfFishing
                     bobberEntityId = 0;
                     ResetFishVisuals();
                     break;
-                case FishingPhase.Waiting:
-                    sim = null;
-                    bobberEntityId = 0;
-                    ResetFishVisuals();
-                    break;
-                case FishingPhase.Bite:
-                    biteWindow = Math.Max(0.5f, p.BiteWindow);
-                    biteLeft = biteWindow;
-                    hookSent = false;
-                    flash = 1f;
-                    biteSplashTimer = 0f;
-                    break;
                 case FishingPhase.Fight:
-                    speciesName = p.SpeciesName;
                     bobberEntityId = p.BobberEntityId;
                     sim = new FightSimulation(new FightParams
                     {
@@ -141,16 +124,6 @@ namespace AnglersArtOfFishing
                     break;
             }
             phase = newPhase;
-        }
-
-        /// <summary>Called from the rod item on the client when the player clicks with it.</summary>
-        public void OnRodUsed()
-        {
-            if (phase == FishingPhase.Bite && !hookSent)
-            {
-                hookSent = true;
-                channel.SendPacket(new FishingActionPacket { Action = 0 });
-            }
         }
 
         void ShowToast(string text, bool good)
@@ -177,7 +150,6 @@ namespace AnglersArtOfFishing
                     reported = sim.Outcome;
                     channel.SendPacket(new FishingActionPacket
                     {
-                        Action = 1,
                         Outcome = sim.Outcome == FightOutcome.Landed ? 2 : sim.Outcome == FightOutcome.LineSnapped ? 1 : 0,
                         FightSeconds = sim.Elapsed
                     });
@@ -196,11 +168,6 @@ namespace AnglersArtOfFishing
             if (flash > 0) flash = Math.Max(0, flash - dt * 3f);
             if (toastLeft > 0) toastLeft -= dt;
 
-            if (phase == FishingPhase.Bite)
-            {
-                biteLeft -= dt;
-            }
-
             DrawHud(dt);
         }
 
@@ -214,25 +181,8 @@ namespace AnglersArtOfFishing
 
             if (flash > 0) Rect(0, 0, capi.Render.FrameWidth, capi.Render.FrameHeight, 1, 1, 1, flash * 0.06f, 5);
 
-            switch (phase)
-            {
-                case FishingPhase.Idle:
-                    // Diegetic bite feedback: bobber dips and splashes in-world. No exclamation mark or text.
-                    break;
-                case FishingPhase.Waiting:
-                    {
-                        int dots = (int)(time * 2.5f) % 4;
-                        Text("Waiting for a bite" + new string('.', dots), cx, baseY, 20, 0.85, 0.92, 1, 0.9, true);
-                        Text(Lang.Get("anglersartoffishing:hud-waiting-hint"), cx, baseY + 26 * s, 14, 0.8, 0.8, 0.8, 0.7, true);
-                        break;
-                    }
-                case FishingPhase.Bite:
-                    // Diegetic bite feedback: bobber goes down in-world. No exclamation mark or text.
-                    break;
-                case FishingPhase.Fight:
-                    if (sim != null) DrawFight(dt, s, cx, baseY);
-                    break;
-            }
+            // Diegetic bite feedback: bobber dips and splashes in-world. No exclamation mark or text.
+            if (phase == FishingPhase.Fight && sim != null) DrawFight(dt, s, cx, baseY);
 
             if (toastLeft > 0 && toast != null)
             {

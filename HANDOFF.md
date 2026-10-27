@@ -4,7 +4,7 @@ You are continuing work on a Vintage Story mod (modid `anglersartoffishing`) in 
 Read this whole file first, then read the source files listed below before editing anything.
 
 ## Goal
-A streamlined, immersive fishing minigame inspired by *Fishing Planet*: cast, hook a bite on the "!", then fight the fish by managing line tension with reel timing (<kbd>RMB</kbd>) to tire the fish and crank it to shore. Fish species are gated by **bait type** AND **rod strength**. Priority: clean, satisfying tactile reel mechanics without screen clutter.
+A streamlined, immersive fishing minigame inspired by *Fishing Planet*, built on top of the **vanilla fishing pole** (wood and bamboo). Cast as normal, hook a bite when the bobber plunges, then fight the fish by managing line tension with reel timing (<kbd>RMB</kbd>) to tire it and crank it to shore. Vanilla decides which fish bites; this mod owns the fight. Priority: clean, satisfying tactile reel mechanics without screen clutter.
 
 ## Rules for working
 - Look up API signatures in `../VintageStoryAPIDocs/` and the skill at
@@ -22,15 +22,15 @@ A streamlined, immersive fishing minigame inspired by *Fishing Planet*: cast, ho
 | File | Purpose |
 |---|---|
 | `src/FightSimulation.cs` | Pure C# fight sim (no VS API). Fishing Planet style tension model: reel winching vs fish pull load with fixed rod tier drag dampening. Stamina, distance, and 3D lateral trajectory. |
-| `src/FishingData.cs` | `FishSpecies` + `SpeciesRegistry` (loads `config/species.json`, `Roll()` filters by rod strength + bait), ProtoBuf packets `FishingStatePacket` (server→client) and `FishingActionPacket` (client→server). |
-| `src/FishingServer.cs` | Sessions per player: cast (water raycast), bait check, bite timer, bite window, starts fight, validates result (min fight time), gives catch, damages rod, consumes bait. |
+| `src/FishingData.cs` | `FishSpecies` + `SpeciesRegistry` (loads `config/species.json`, server only), `FishingPhase` (Idle / Fight), ProtoBuf packets `FishingStatePacket` (server→client) and `FishingActionPacket` (client→server, fight outcome). |
 | `src/FishingClient.cs` | Dual renderer: `BobberMotionRenderer` (`EnumRenderStage.Before` order 0.95) runs the fight sim and positions the bobber (Y tension dive, thrash, yaw, pitch, roll) and rope line end in 3D, and handles physical bite dipping; `FishingClient` (`EnumRenderStage.Ortho`) draws sleek single Horizontal Tension Bar HUD with digital distance counter. Diegetic bite cue: bobber plunges underwater with splash sound/ripples (no exclamation mark HUD clutter). |
-| `src/VanillaPoleBridge.cs` | Harmony bridge (`VanillaPolePatches` + `VanillaFightServer`) hooking the vanilla `ItemFishingPole` (wood and bamboo). Seamlessly takes over when a fish bites, freezes bobber bite expiration during fight, routes loot through vanilla `TryCatchFish` on landing (rewarding authentic vanilla whole fish `game:fishraw-...`), and clears catch on line snap/escape. |
-| `src/ItemFishingRod.cs` | Item class `AAFItemFishingRod` preserved for future powerful rod extensions; unhooked from active registration. |
-| `src/AnglersArtModSystem.cs` | Loads species (server), initializes `FishingServer`/`FishingClient`, applies and unpatches Harmony hooks into vanilla poles. |
-| `assets/anglersartoffishing/` | `itemtypes/bait.json` (spinner lure only, with `isFishBait` & `consumeChance`), `config/species.json` (vanilla whole fish `fishraw-...`), `recipes/grid/fishing.json` (spinner lure recipe), `lang/en.json`, textures. |
+| `src/VanillaPoleBridge.cs` | Harmony bridge (`VanillaPolePatches` + `VanillaFightServer`) hooking the vanilla `ItemFishingPole` (wood and bamboo). `VanillaFightServer` owns the network channel and the per-player fight sessions. Seamlessly takes over when a fish bites, freezes bobber bite expiration during fight, validates the result (min fight time), routes loot through vanilla `TryCatchFish` on landing (rewarding authentic vanilla whole fish `game:fishraw-...`), and clears catch on line snap/escape. |
+| `src/AnglersArtModSystem.cs` | Loads species (server), initializes `VanillaFightServer`/`FishingClient`, applies and unpatches Harmony hooks into vanilla poles. |
+| `assets/anglersartoffishing/` | `itemtypes/bait.json` (spinner lure only, with `isFishBait` & `consumeChance`), `config/species.json` (fight stats per vanilla fish `fishraw-...`), `recipes/grid/fishing.json` (spinner lure recipe), `lang/en.json`, `textures/item/bait-spinner.png` (regenerate with `generate_icons.py`). |
 
-Flow (Vanilla Pole Hook): right-click casts vanilla bobber + rope → vanilla waits for bite → on bite, vanilla splash plays and bobber physically plunges under water → right-click hooks fish → custom fight takes over (bobber & rope dance across the water in 3D following foaming fish) → on landing, vanilla `TryCatchFish` rewards the catch naturally (authentic whole fish); on snap/escape, catch is cleared and pole damaged. Custom rods are omitted and standard fishing relies on vanilla baits (earthworms, dough, meat), with the craftable spinner lure as a reusable metal lure option.
+The mod has no rods, sessions or casting of its own: an earlier standalone rod (`ItemFishingRod`, `FishingServer`) was removed in favour of the vanilla pole. `species.json` still carries `Baits` and `Weight` per fish, but they are **not applied** yet because vanilla picks the fish; they are kept for a future bait-gating patch on vanilla's fish selection.
+
+Flow (Vanilla Pole Hook): right-click casts vanilla bobber + rope → vanilla waits for bite → on bite, vanilla splash plays and bobber physically plunges under water → right-click hooks fish → custom fight takes over (bobber & rope dance across the water in 3D following foaming fish) → on landing, vanilla `TryCatchFish` rewards the catch naturally (authentic whole fish); on snap/escape, catch is cleared and pole damaged. Standard fishing relies on vanilla baits (earthworms, dough, meat), with the craftable spinner lure as a reusable metal lure option. Pole tier only affects the fight: bamboo gets slightly more drag dampening (`RodMargin` 1), reel speed (1.1×) and snap forgiveness (0.6s vs 0.5s) than wood.
 
 ## Mechanics Details (Fishing Planet Style)
 - **Single Horizontal Tension Bar**:

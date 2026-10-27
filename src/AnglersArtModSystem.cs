@@ -8,7 +8,7 @@ namespace AnglersArtOfFishing
     {
         public const string ChannelName = "anglersartoffishing";
 
-        public FishingServer Server { get; private set; }
+        public VanillaFightServer Server { get; private set; }
         public FishingClient Client { get; private set; }
 
         public override void Start(ICoreAPI api)
@@ -26,10 +26,8 @@ namespace AnglersArtOfFishing
         public override void StartServerSide(ICoreServerAPI api)
         {
             base.StartServerSide(api);
-            Server = new FishingServer(api);
-            var vanillaServer = new VanillaFightServer(api, Server.Channel);
-            Server.VanillaServer = vanillaServer;
-            VanillaPolePatches.Server = vanillaServer;
+            Server = new VanillaFightServer(api);
+            VanillaPolePatches.Server = Server;
         }
 
         public override void StartClientSide(ICoreClientAPI api)

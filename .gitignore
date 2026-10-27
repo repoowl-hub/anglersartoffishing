@@ -7,3 +7,5 @@ obj/
 *.docx
 temp*
 Releases/
+*.py
+*.md

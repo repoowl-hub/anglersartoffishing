@@ -3,8 +3,8 @@
   "modid": "anglersartoffishing",
   "name": "Angler's Art of Fishing",
   "authors": [ "DinnerTime" ],
-  "description": "A tension-based fishing minigame: hook, fight, tire out and land fish. Fish are gated by bait type and rod strength.",
-  "version": "0.1.0",
+  "description": "Turns vanilla fishing into a tension-based fight: hook a bite with the wood or bamboo fishing pole, then reel with care to tire the fish out and land it.",
+  "version": "0.2.0",
   "dependencies": {
     "game": "1.22.0"
   }

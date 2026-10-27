@@ -5,6 +5,7 @@ using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
+using Vintagestory.GameContent;
 
 namespace AnglersArtOfFishing
 {
@@ -20,9 +21,9 @@ namespace AnglersArtOfFishing
         FishingPhase phase = FishingPhase.Idle;
         FightSimulation sim;
         FightOutcome reported = FightOutcome.None;
-        string speciesName = "";
-        float biteWindow, biteLeft;
-        bool hookSent;
+        long bobberEntityId;
+
+        public bool InFight => phase == FishingPhase.Fight;
 
         // Toast
         string toast;
@@ -34,16 +35,22 @@ namespace AnglersArtOfFishing
         float time;
         float flash; // 0..1 white flash on state changes
 
+        readonly BobberMotionRenderer motionRenderer;
+        readonly FishModelRenderer fishModel;
+        float fishDepth = 0.25f;
+
         // In-world water animation
         Vec3d baseBobber;
         Vec3d castOrigin;
         Vec3d currentFishPos;
+        double lastRestingBobberY;
         float swimPhase;
         float splashTimer;
         float rippleTimer;
         float shadowTimer;
         float soundTimer;
         float biteSplashTimer;
+        bool wasAirborne;
 
         // Rendering resources
         LoadedTexture white;
@@ -71,7 +78,11 @@ namespace AnglersArtOfFishing
                 api.Gui.LoadOrUpdateCairoTexture(surface, false, ref white);
             }
 
+            motionRenderer = new BobberMotionRenderer(this);
+            api.Event.RegisterRenderer(motionRenderer, EnumRenderStage.Before, "anglersartoffishing-motion");
             api.Event.RegisterRenderer(this, EnumRenderStage.Ortho, "anglersartoffishing-hud");
+            fishModel = new FishModelRenderer(api);
+            api.Event.RegisterRenderer(fishModel, EnumRenderStage.Opaque, "anglersartoffishing-fish");
         }
 
         // ------------------------------------------------------------------ network / input
@@ -87,38 +98,36 @@ namespace AnglersArtOfFishing
 
             if (!string.IsNullOrEmpty(p.Message))
             {
-                bool good = p.Message.EndsWith("caught");
-                ShowToast(good ? Lang.Get(p.Message, p.SpeciesName, p.SizeCm.ToString("0")) : Lang.Get(p.Message), good);
+                ShowToast(Lang.Get(p.Message), p.Message.EndsWith("caught"));
             }
 
             switch (newPhase)
             {
                 case FishingPhase.Idle:
                     sim = null;
+                    bobberEntityId = 0;
                     ResetFishVisuals();
-                    break;
-                case FishingPhase.Waiting:
-                    sim = null;
-                    ResetFishVisuals();
-                    break;
-                case FishingPhase.Bite:
-                    biteWindow = Math.Max(0.5f, p.BiteWindow);
-                    biteLeft = biteWindow;
-                    hookSent = false;
-                    flash = 1f;
-                    biteSplashTimer = 0f;
+                    // The server ran StopFishing, but the player's own animations are client side and the client never
+                    // ran it (clicks are blocked during the fight), so drop the pole-holding stance here
+                    capi.World.Player?.Entity?.AnimManager?.StopAnimation("fishingpole-idle");
+                    VanillaPolePatches.HiddenFishEntityId = 0;
                     break;
                 case FishingPhase.Fight:
-                    speciesName = p.SpeciesName;
+                    bobberEntityId = p.BobberEntityId;
+                    fishModel.Load(p.FishEntityCode);
+                    VanillaPolePatches.HiddenFishEntityId = p.HiddenFishEntityId;
+                    fishDepth = 0.6f;
                     sim = new FightSimulation(new FightParams
                     {
                         Power = p.Power,
                         StaminaSeconds = p.StaminaSeconds,
                         Aggression = p.Aggression,
+                        Style = (FightStyle)p.Style,
                         RodMargin = p.RodMargin,
                         ReelSpeed = p.ReelSpeed,
                         Forgiveness = p.Forgiveness,
-                        StartDistance = p.StartDistance
+                        StartDistance = p.StartDistance,
+                        SlackEscapeSeconds = p.SlackEscapeSeconds
                     });
                     sim.BehaviourChanged += _ => flash = 0.6f;
                     reported = FightOutcome.None;
@@ -131,16 +140,6 @@ namespace AnglersArtOfFishing
             phase = newPhase;
         }
 
-        /// <summary>Called from the rod item on the client when the player clicks with it.</summary>
-        public void OnRodUsed()
-        {
-            if (phase == FishingPhase.Bite && !hookSent)
-            {
-                hookSent = true;
-                channel.SendPacket(new FishingActionPacket { Action = 0 });
-            }
-        }
-
         void ShowToast(string text, bool good)
         {
             toast = text;
@@ -150,18 +149,11 @@ namespace AnglersArtOfFishing
 
         // ------------------------------------------------------------------ frame
 
-        public void OnRenderFrame(float dt, EnumRenderStage stage)
+        public void OnBeforeRenderFrame(float dt)
         {
             time += dt;
-            if (flash > 0) flash = Math.Max(0, flash - dt * 3f);
-            if (toastLeft > 0) toastLeft -= dt;
 
-            if (phase == FishingPhase.Bite)
-            {
-                biteLeft -= dt;
-                UpdateBiteEffects(dt);
-            }
-            else if (phase == FishingPhase.Fight && sim != null)
+            if (phase == FishingPhase.Fight && sim != null)
             {
                 bool reel = capi.Input.InWorldMouseButton.Right;
                 sim.Update(dt, reel);
@@ -172,7 +164,6 @@ namespace AnglersArtOfFishing
                     reported = sim.Outcome;
                     channel.SendPacket(new FishingActionPacket
                     {
-                        Action = 1,
                         Outcome = sim.Outcome == FightOutcome.Landed ? 2 : sim.Outcome == FightOutcome.LineSnapped ? 1 : 0,
                         FightSeconds = sim.Elapsed
                     });
@@ -180,6 +171,16 @@ namespace AnglersArtOfFishing
                     phase = FishingPhase.Idle; // server answer with the final message follows
                 }
             }
+            else
+            {
+                UpdateBiteBobberMotion(dt);
+            }
+        }
+
+        public void OnRenderFrame(float dt, EnumRenderStage stage)
+        {
+            if (flash > 0) flash = Math.Max(0, flash - dt * 3f);
+            if (toastLeft > 0) toastLeft -= dt;
 
             DrawHud(dt);
         }
@@ -194,29 +195,8 @@ namespace AnglersArtOfFishing
 
             if (flash > 0) Rect(0, 0, capi.Render.FrameWidth, capi.Render.FrameHeight, 1, 1, 1, flash * 0.06f, 5);
 
-            switch (phase)
-            {
-                case FishingPhase.Waiting:
-                    {
-                        int dots = (int)(time * 2.5f) % 4;
-                        Text("Waiting for a bite" + new string('.', dots), cx, baseY, 20, 0.85, 0.92, 1, 0.9, true);
-                        Text(Lang.Get("anglersartoffishing:hud-waiting-hint"), cx, baseY + 26 * s, 14, 0.8, 0.8, 0.8, 0.7, true);
-                        break;
-                    }
-                case FishingPhase.Bite:
-                    {
-                        float pulse = 1f + 0.12f * MathF.Sin(time * 30f);
-                        Text("!", cx, baseY - 60 * s, (int)(76 * pulse), 1, 0.85, 0.25, 1, true);
-                        Text(Lang.Get("anglersartoffishing:hud-bite"), cx, baseY, 24, 1, 1, 1, 1, true);
-                        float w = 220 * s, h = 8 * s;
-                        Rect(cx - w / 2, baseY + 40 * s, w, h, 0, 0, 0, 0.6f);
-                        Rect(cx - w / 2, baseY + 40 * s, w * Math.Clamp(biteLeft / biteWindow, 0, 1), h, 1, 0.8f, 0.25f, 1);
-                        break;
-                    }
-                case FishingPhase.Fight:
-                    if (sim != null) DrawFight(dt, s, cx, baseY);
-                    break;
-            }
+            // Diegetic bite feedback: bobber dips and splashes in-world. No exclamation mark or text.
+            if (phase == FishingPhase.Fight && sim != null) DrawFight(dt, s, cx, baseY);
 
             if (toastLeft > 0 && toast != null)
             {
@@ -239,92 +219,68 @@ namespace AnglersArtOfFishing
             float x0 = cx - barW / 2 + shake;
             float yT = baseY;
 
-            // ---------------- Species & Dynamic Status Feedback
-            string status;
-            double sr = 1, sg = 1, sb = 1;
-            if (danger > 0.08f)
+            // ---------------- Horizontal Continuous Gradient Tension Bar (Fishing Planet Style)
+            // Outer bezel frame
+            Rect(x0 - 3 * s, yT - 3 * s, barW + 6 * s, barH + 6 * s, 0.03f, 0.04f, 0.06f, 0.92f);
+            Rect(x0 - 1 * s, yT - 1 * s, barW + 2 * s, barH + 2 * s, 0.18f, 0.22f, 0.28f, 0.60f);
+
+            // Dark glass track slot
+            Rect(x0, yT, barW, barH, 0.05f, 0.06f, 0.08f, 0.95f);
+
+            // Faint backplate gradient underlay (shows the gauge spectrum faintly at 14% opacity)
+            int bgSlices = 70;
+            float sliceW = (barW - 2 * s) / bgSlices;
+            for (int i = 0; i < bgSlices; i++)
             {
-                status = "[! OVERLOAD - RELEASE REEL !]";
-                sr = 1.0; sg = 0.25; sb = 0.2;
-            }
-            else if (sim.Behaviour == FishBehaviour.Dash)
-            {
-                status = $"[! {Lang.Get("anglersartoffishing:hud-dash")} !]";
-                sr = 1.0; sg = 0.35; sb = 0.25;
-            }
-            else if (sim.Behaviour == FishBehaviour.Windup)
-            {
-                status = $"[ {Lang.Get("anglersartoffishing:hud-windup")} ]";
-                sr = 1.0; sg = 0.85; sb = 0.3;
-            }
-            else if (sim.Behaviour == FishBehaviour.Tired)
-            {
-                status = $"[ {Lang.Get("anglersartoffishing:hud-tired")} ]";
-                sr = 0.35; sg = 1.0; sb = 0.5;
-            }
-            else if (sim.Behaviour == FishBehaviour.Recover)
-            {
-                status = $"[ {Lang.Get("anglersartoffishing:hud-recover")} ]";
-                sr = 0.65; sg = 0.95; sb = 0.8;
-            }
-            else
-            {
-                if (sim.Reeling)
-                {
-                    status = "[ Reeling In ]";
-                    sr = 0.75; sg = 0.95; sb = 1.0;
-                }
-                else
-                {
-                    status = $"[ {Lang.Get("anglersartoffishing:hud-swim")} ]";
-                    sr = 0.75; sg = 0.85; sb = 0.95;
-                }
+                float u = (i + 0.5f) / bgSlices;
+                GetTensionGradientColor(u, out float ur, out float ug, out float ub);
+                Rect(x0 + 1 * s + i * sliceW, yT + 1 * s, sliceW + 0.5f, barH - 2 * s, ur, ug, ub, 0.14f);
             }
 
-            Text(speciesName, cx, yT - 52 * s, 15, 0.82, 0.90, 1.0, 0.85, true);
-            Text(status, cx, yT - 30 * s, 22, sr, sg, sb, 1, true);
-
-            // ---------------- Single Horizontal Tension Bar
-            // Outer frame
-            Rect(x0 - 4 * s, yT - 4 * s, barW + 8 * s, barH + 8 * s, 0.04f, 0.05f, 0.07f, 0.88f);
-            // Slot track
-            Rect(x0, yT, barW, barH, 0.10f, 0.12f, 0.15f, 0.95f);
-
-            // Zone underlays
-            // Slack zone (0.0 to 0.14)
-            Rect(x0, yT, barW * 0.14f, barH, 0.20f, 0.50f, 0.85f, 0.22f);
-            // Safe fight zone (0.25 to 0.85)
-            Rect(x0 + barW * FightSimulation.SweetMin, yT, barW * (FightSimulation.SweetMax - FightSimulation.SweetMin), barH, 0.25f, 0.85f, 0.40f, 0.20f);
-            // Danger snap zone (0.88 to 1.00)
-            Rect(x0 + barW * FightSimulation.DangerStart, yT, barW * (1f - FightSimulation.DangerStart), barH, 0.95f, 0.18f, 0.18f, 0.35f);
-
-            // Subtle zone tick dividers
-            Rect(x0 + barW * FightSimulation.SweetMin - 1 * s, yT, 2 * s, barH, 1f, 1f, 1f, 0.22f);
-            Rect(x0 + barW * FightSimulation.DangerStart - 1 * s, yT, 2 * s, barH, 1f, 0.35f, 0.35f, 0.35f);
-
-            // Fill
+            // Continuous active tension fill
             float t = Math.Clamp(dispTension, 0f, 1f);
-            GetTensionColor(t, out float fr, out float fg, out float fb);
-            Rect(x0 + 1 * s, yT + 2 * s, (barW - 2 * s) * t, barH - 4 * s, fr, fg, fb, 0.95f);
+            float fillW = (barW - 2 * s) * t;
+            if (fillW > 0.5f)
+            {
+                int fillSlices = Math.Max(2, (int)(bgSlices * t));
+                float fSliceW = fillW / fillSlices;
+                for (int i = 0; i < fillSlices; i++)
+                {
+                    float u = (i + 0.5f) / bgSlices;
+                    GetTensionGradientColor(u, out float fr, out float fg, out float fb);
+                    Rect(x0 + 1 * s + i * fSliceW, yT + 1 * s, fSliceW + 0.5f, barH - 2 * s, fr, fg, fb, 0.96f);
+                }
 
-            // Needle indicator pip
-            Rect(x0 + barW * t - 1.5f * s, yT - 5 * s, 3 * s, barH + 10 * s, 1f, 1f, 1f, 1f);
+                // Top highlight shine line along active fill for 3D glass sheen
+                Rect(x0 + 1 * s, yT + 1 * s, fillW, 1.5f * s, 1f, 1f, 1f, 0.28f);
+            }
 
-            // Red overload pulsing border
+            // Leading indicator needle pip
+            float needleX = x0 + 1 * s + fillW;
+            GetTensionGradientColor(t, out float nr, out float ng, out float nb);
+            // Outer needle shadow
+            Rect(needleX - 2.5f * s, yT - 4 * s, 5 * s, barH + 8 * s, 0.02f, 0.03f, 0.05f, 0.70f);
+            // Tinted pip
+            Rect(needleX - 1.5f * s, yT - 3 * s, 3 * s, barH + 6 * s, nr, ng, nb, 0.85f);
+            // Crisp white core
+            Rect(needleX - 0.75f * s, yT - 2 * s, 1.5f * s, barH + 4 * s, 1f, 1f, 1f, 1.0f);
+
+            // Red overload pulsing border (danger > 0.02)
             if (danger > 0.02f)
             {
-                float blink = 0.4f + 0.6f * MathF.Abs(MathF.Sin(time * 16f));
-                Rect(x0 - 4 * s, yT - 4 * s, barW + 8 * s, 3 * s, 1f, 0.15f, 0.15f, danger * blink);
-                Rect(x0 - 4 * s, yT + barH + 1 * s, barW + 8 * s, 3 * s, 1f, 0.15f, 0.15f, danger * blink);
-                Rect(x0 - 4 * s, yT - 4 * s, 3 * s, barH + 8 * s, 1f, 0.15f, 0.15f, danger * blink);
-                Rect(x0 + barW + 1 * s, yT - 4 * s, 3 * s, barH + 8 * s, 1f, 0.15f, 0.15f, danger * blink);
+                float blink = 0.5f + 0.5f * MathF.Abs(MathF.Sin(time * 18f));
+                float da = danger * blink * 0.95f;
+                Rect(x0 - 4 * s, yT - 4 * s, barW + 8 * s, 2.5f * s, 1f, 0.15f, 0.15f, da);
+                Rect(x0 - 4 * s, yT + barH + 1.5f * s, barW + 8 * s, 2.5f * s, 1f, 0.15f, 0.15f, da);
+                Rect(x0 - 4 * s, yT - 4 * s, 2.5f * s, barH + 8 * s, 1f, 0.15f, 0.15f, da);
+                Rect(x0 + barW + 1.5f * s, yT - 4 * s, 2.5f * s, barH + 8 * s, 1f, 0.15f, 0.15f, da);
             }
 
-            // Slack line warning
+            // Slack line warning (if line is left completely loose for too long)
             if (sim.SlackRatio > 0.05f)
             {
                 float slackAlpha = 0.5f + 0.5f * sim.SlackRatio;
-                Text(Lang.Get("anglersartoffishing:hud-slack"), cx, yT - 8 * s, 14, 0.5, 0.8, 1.0, slackAlpha, true);
+                Text(Lang.Get("anglersartoffishing:hud-slack"), cx, yT - 18 * s, 14, 0.5, 0.8, 1.0, slackAlpha, true);
             }
 
             // ---------------- Digital Distance & Controls readout
@@ -343,33 +299,48 @@ namespace AnglersArtOfFishing
             Text(Lang.Get("anglersartoffishing:hud-controls"), cx, yT + barH + 34 * s, 13, 0.80, 0.82, 0.86, 0.65, true);
         }
 
-        static void GetTensionColor(float t, out float r, out float g, out float b)
+        static void GetTensionGradientColor(float u, out float r, out float g, out float b)
         {
-            if (t < 0.14f)
+            u = Math.Clamp(u, 0f, 1f);
+            if (u <= 0.15f)
             {
-                r = 0.30f; g = 0.55f; b = 0.88f;
+                // Deep Blue -> Cyan
+                float k = u / 0.15f;
+                r = 0.12f * (1f - k) + 0.10f * k;
+                g = 0.40f * (1f - k) + 0.78f * k;
+                b = 0.95f * (1f - k) + 0.92f * k;
             }
-            else if (t < FightSimulation.SweetMin)
+            else if (u <= 0.45f)
             {
-                float k = (t - 0.14f) / (FightSimulation.SweetMin - 0.14f);
-                r = 0.30f + 0.02f * k;
-                g = 0.55f + 0.37f * k;
-                b = 0.88f - 0.46f * k;
+                // Cyan -> Emerald Green
+                float k = (u - 0.15f) / 0.30f;
+                r = 0.10f * (1f - k) + 0.18f * k;
+                g = 0.78f * (1f - k) + 0.92f * k;
+                b = 0.92f * (1f - k) + 0.32f * k;
             }
-            else if (t < 0.78f)
+            else if (u <= 0.72f)
             {
-                r = 0.32f; g = 0.92f; b = 0.42f;
+                // Emerald Green -> Rich Golden Yellow (Optimal winching sweet zone)
+                float k = (u - 0.45f) / 0.27f;
+                r = 0.18f * (1f - k) + 0.96f * k;
+                g = 0.92f * (1f - k) + 0.88f * k;
+                b = 0.32f * (1f - k) + 0.10f * k;
             }
-            else if (t < FightSimulation.DangerStart)
+            else if (u <= 0.88f)
             {
-                float k = (t - 0.78f) / (FightSimulation.DangerStart - 0.78f);
-                r = 0.32f + 0.63f * k;
-                g = 0.92f - 0.10f * k;
-                b = 0.42f - 0.17f * k;
+                // Golden Yellow -> Vivid Orange (Heavy strain warning)
+                float k = (u - 0.72f) / 0.16f;
+                r = 0.96f * (1f - k) + 1.00f * k;
+                g = 0.88f * (1f - k) + 0.45f * k;
+                b = 0.10f * (1f - k) + 0.08f * k;
             }
             else
             {
-                r = 1.0f; g = 0.22f; b = 0.18f;
+                // Vivid Orange -> Deep Crimson Red (Overload snap zone)
+                float k = (u - 0.88f) / 0.12f;
+                r = 1.00f;
+                g = 0.45f * (1f - k) + 0.15f * k;
+                b = 0.08f * (1f - k) + 0.15f * k;
             }
         }
 
@@ -422,46 +393,111 @@ namespace AnglersArtOfFishing
             rippleTimer = 0f;
             shadowTimer = 0f;
             soundTimer = 0f;
+            wasAirborne = false;
         }
 
         void ResetFishVisuals()
         {
+            fishModel?.Unload();
             currentFishPos = null;
             castOrigin = null;
+            baseBobber = null;
+            lastRestingBobberY = 0;
         }
 
-        void UpdateBiteEffects(float dt)
+        void UpdateBiteBobberMotion(float dt)
         {
-            if (baseBobber == null) return;
+            var slot = capi.World.Player?.InventoryManager?.ActiveHotbarSlot;
+            if (slot?.Itemstack?.Collectible is ItemFishingPole)
+            {
+                var bobber = VanillaPolePatches.GetBobber(capi.World, slot.Itemstack);
+                if (bobber != null && bobber.Alive)
+                {
+                    bool biting = bobber.WatchedAttributes.GetBool(VanillaPolePatches.BiteAttr);
+                    if (biting)
+                    {
+                        if (lastRestingBobberY == 0 || Math.Abs(bobber.Pos.Y - lastRestingBobberY) > 1.2)
+                        {
+                            lastRestingBobberY = bobber.Pos.Y;
+                        }
+
+                        // Bobber visibly plunges downward into water with erratic tugging
+                        double dip = 0.28 + 0.08 * MathF.Sin(time * 30f);
+                        float pitch = 0.52f + 0.12f * MathF.Sin(time * 24f);
+                        float roll = 0.18f * MathF.Cos(time * 20f);
+
+                        bobber.Pos.Y = lastRestingBobberY - dip;
+                        bobber.Pos.Pitch = pitch;
+                        bobber.Pos.Roll = roll;
+
+                        var interp = bobber.GetBehavior<EntityBehaviorInterpolatePosition>();
+                        if (interp != null)
+                        {
+                            interp.pN.y = bobber.Pos.Y;
+                            interp.pL.y = bobber.Pos.Y;
+                            interp.positionQueue.Clear();
+                            interp.queueCount = 0;
+                            interp.currentPitch = pitch;
+                            interp.targetPitch = pitch;
+                            interp.currentRoll = roll;
+                            interp.targetRoll = roll;
+                        }
+
+                        var cm = capi.ModLoader.GetModSystem<ClothManager>();
+                        var rope = cm?.GetClothSystemAttachedToEntity(bobber.EntityId);
+                        if (rope != null)
+                        {
+                            rope.LastPoint.Pos.Set(bobber.Pos.X, bobber.Pos.Y, bobber.Pos.Z);
+                            rope.CanRip = false;
+                        }
+
+                        SpawnBiteVisuals(bobber.Pos.X, lastRestingBobberY, bobber.Pos.Z, dt);
+                    }
+                    else
+                    {
+                        lastRestingBobberY = bobber.Pos.Y;
+                    }
+                }
+                else
+                {
+                    lastRestingBobberY = 0;
+                }
+            }
+            else
+            {
+                lastRestingBobberY = 0;
+            }
+        }
+
+        void SpawnBiteVisuals(double x, double surfaceY, double z, float dt)
+        {
             biteSplashTimer += dt;
-            if (biteSplashTimer >= 0.16f)
+            if (biteSplashTimer >= 0.12f)
             {
                 biteSplashTimer = 0f;
 
-                // Periodic bite ripple expanding at the bobber
                 var ripple = new SimpleParticleProperties(
                     1f, 2f,
-                    ColorUtil.ToRgba(200, 235, 248, 255),
-                    new Vec3d(baseBobber.X - 0.08, baseBobber.Y + 0.02, baseBobber.Z - 0.08),
-                    new Vec3d(baseBobber.X + 0.08, baseBobber.Y + 0.04, baseBobber.Z + 0.08),
-                    new Vec3f(-0.03f, 0.01f, -0.03f),
-                    new Vec3f(0.03f, 0.02f, 0.03f),
-                    0.45f, 0f, 0.06f, 0.12f, EnumParticleModel.Quad
+                    ColorUtil.ToRgba(205, 238, 252, 255),
+                    new Vec3d(x - 0.08, surfaceY + 0.01, z - 0.08),
+                    new Vec3d(x + 0.08, surfaceY + 0.03, z + 0.08),
+                    new Vec3f(-0.04f, 0.01f, -0.04f),
+                    new Vec3f(0.04f, 0.02f, 0.04f),
+                    0.50f, 0f, 0.08f, 0.16f, EnumParticleModel.Quad
                 );
                 ripple.ShouldSwimOnLiquid = true;
                 ripple.OpacityEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, -200f);
-                ripple.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.06f);
+                ripple.SizeEvolve = EvolvingNatFloat.create(EnumTransformFunction.LINEAR, 0.08f);
                 capi.World.SpawnParticles(ripple);
 
-                // Small sharp tug splash
                 var splash = new SimpleParticleProperties(
-                    2f, 4f,
-                    ColorUtil.ToRgba(210, 230, 250, 255),
-                    new Vec3d(baseBobber.X - 0.1, baseBobber.Y + 0.05, baseBobber.Z - 0.1),
-                    new Vec3d(baseBobber.X + 0.1, baseBobber.Y + 0.1, baseBobber.Z + 0.1),
-                    new Vec3f(-0.5f, 0.8f, -0.5f),
-                    new Vec3f(0.5f, 1.8f, 0.5f),
-                    0.45f, 1.0f, 0.08f, 0.18f, EnumParticleModel.Quad
+                    2f, 3f,
+                    ColorUtil.ToRgba(215, 235, 255, 255),
+                    new Vec3d(x - 0.06, surfaceY + 0.02, z - 0.06),
+                    new Vec3d(x + 0.06, surfaceY + 0.06, z + 0.06),
+                    new Vec3f(-0.35f, 0.6f, -0.35f),
+                    new Vec3f(0.35f, 1.4f, 0.35f),
+                    0.40f, 1.0f, 0.07f, 0.15f, EnumParticleModel.Quad
                 );
                 splash.ShouldDieInLiquid = true;
                 capi.World.SpawnParticles(splash);
@@ -470,6 +506,11 @@ namespace AnglersArtOfFishing
 
         void UpdateFightWaterEffects(float dt)
         {
+            if (baseBobber == null && bobberEntityId != 0)
+            {
+                var b = capi.World.GetEntityById(bobberEntityId);
+                if (b != null) baseBobber = b.Pos.XYZ.Clone();
+            }
             if (baseBobber == null || sim == null) return;
             var player = capi.World.Player?.Entity;
             if (player == null) return;
@@ -504,6 +545,10 @@ namespace AnglersArtOfFishing
             float swimSpeed = sim.Behaviour switch
             {
                 FishBehaviour.Dash => 22f,
+                FishBehaviour.Run => 18f,
+                FishBehaviour.Shake => 42f,   // rapid head-shaking
+                FishBehaviour.Dive => 6f,
+                FishBehaviour.Jump => 12f,
                 FishBehaviour.Windup => 32f,
                 FishBehaviour.Tired => 4.5f,
                 FishBehaviour.Recover => 5.5f,
@@ -512,7 +557,7 @@ namespace AnglersArtOfFishing
             swimPhase += dt * swimSpeed;
 
             // Forward/back darting surge
-            double surge = sim.Behaviour == FishBehaviour.Dash
+            double surge = sim.Behaviour == FishBehaviour.Dash || sim.Behaviour == FishBehaviour.Run
                 ? MathF.Sin(swimPhase * 0.5f) * 0.45
                 : MathF.Sin(swimPhase * 0.5f) * 0.22;
 
@@ -524,6 +569,9 @@ namespace AnglersArtOfFishing
             double lateralWiggle = sim.Behaviour switch
             {
                 FishBehaviour.Dash => MathF.Sin(swimPhase) * 0.55,
+                FishBehaviour.Run => MathF.Sin(swimPhase) * 0.45,
+                FishBehaviour.Shake => MathF.Sin(swimPhase) * 0.12,   // tight, violent side-to-side
+                FishBehaviour.Dive => MathF.Sin(swimPhase) * 0.10,
                 FishBehaviour.Windup => MathF.Sin(swimPhase) * 0.15, // rapid nervous vibration
                 FishBehaviour.Tired => MathF.Sin(swimPhase) * 0.20,
                 _ => MathF.Sin(swimPhase) * 0.38
@@ -531,10 +579,29 @@ namespace AnglersArtOfFishing
 
             double targetLateral = lateralBase + lateralWiggle;
 
+            // Vertical bobbing and line tension dive
+            double dip = Math.Clamp(sim.Tension * 0.16 + (sim.Behaviour == FishBehaviour.Dash ? 0.10 : 0.0), 0.0, 0.28);
+            double thrash = MathF.Sin(swimPhase * 2.2f) * (sim.Behaviour == FishBehaviour.Shake ? 0.07 : 0.035);
+            bool windingUp = sim.Behaviour == FishBehaviour.Windup;
+
+            // Diving fish drag the bobber well under; a fish about to dive starts pulling it down
+            if (sim.Behaviour == FishBehaviour.Dive) dip = 0.42 + 0.06 * MathF.Sin(swimPhase * 0.7f);
+            else if (windingUp && sim.NextAction == FishBehaviour.Dive) dip += 0.18 * sim.BehaviourProgress;
+            // A fish about to jump rises towards the surface
+            else if (windingUp && sim.NextAction == FishBehaviour.Jump) dip *= 1.0 - 0.8 * sim.BehaviourProgress;
+
+            // Jumping fish leave the water in an arc - bigger fish leap higher
+            double rise = sim.Airborne ? MathF.Sin(MathF.PI * sim.AirProgress) * (0.5 + 0.9 * sim.Power) : 0.0;
+
             // World coordinates on water surface
             double targetX = castOrigin.X + fwdX * (targetDist + surge) + rightX * targetLateral;
-            double targetY = baseBobber.Y;
+            // With the real fish model on show the fish itself leaps; otherwise the bobber stands in for it
+            bool showFish = fishModel.Loaded;
+            double targetY = baseBobber.Y - dip + (sim.Airborne ? 0.0 : thrash) + (showFish ? 0.0 : rise);
             double targetZ = castOrigin.Z + fwdZ * (targetDist + surge) + rightZ * targetLateral;
+
+            double prevX = currentFishPos?.X ?? targetX;
+            double prevZ = currentFishPos?.Z ?? targetZ;
 
             if (currentFishPos == null)
             {
@@ -542,7 +609,7 @@ namespace AnglersArtOfFishing
             }
             else
             {
-                float followRate = sim.Behaviour == FishBehaviour.Dash ? 20f : 12f;
+                float followRate = sim.Behaviour == FishBehaviour.Dash || sim.Behaviour == FishBehaviour.Run ? 20f : 12f;
                 currentFishPos.X += (targetX - currentFishPos.X) * (1f - MathF.Exp(-followRate * dt));
                 currentFishPos.Y = targetY;
                 currentFishPos.Z += (targetZ - currentFishPos.Z) * (1f - MathF.Exp(-followRate * dt));
@@ -552,9 +619,65 @@ namespace AnglersArtOfFishing
             double fy = currentFishPos.Y;
             double fz = currentFishPos.Z;
 
+            // Movement yaw for realistic bobber orientation
+            double moveDx = fx - prevX;
+            double moveDz = fz - prevZ;
+            float swimYaw = Math.Abs(moveDx) > 0.001 || Math.Abs(moveDz) > 0.001
+                ? (float)Math.Atan2(moveDx, moveDz)
+                : (float)Math.Atan2(fwdX, fwdZ);
+
+            float tiltPitch = sim.Airborne && !showFish ? -0.9f + 1.8f * sim.AirProgress   // nose up on the way out, nose down on re-entry
+                            : (float)(0.20f + 0.30f * sim.Tension);
+            if (showFish) UpdateFishModel(dt, fx, fz, swimYaw, rise);
+            float tiltRoll = MathF.Sin(swimPhase) * (sim.Behaviour == FishBehaviour.Shake ? 0.6f : 0.22f);
+
+            // Make the vanilla bobber entity and the attached rope follow the foaming fish in world
+            if (bobberEntityId != 0)
+            {
+                var bobber = capi.World.GetEntityById(bobberEntityId);
+                if (bobber != null && bobber.Alive)
+                {
+                    bobber.Pos.SetPos(fx, fy, fz);
+                    bobber.Pos.Yaw = swimYaw;
+                    bobber.Pos.Pitch = tiltPitch;
+                    bobber.Pos.Roll = tiltRoll;
+
+                    var interp = bobber.GetBehavior<EntityBehaviorInterpolatePosition>();
+                    if (interp != null)
+                    {
+                        interp.pN.x = fx; interp.pN.y = fy; interp.pN.z = fz;
+                        interp.pL.x = fx; interp.pL.y = fy; interp.pL.z = fz;
+                        interp.positionQueue.Clear();
+                        interp.queueCount = 0;
+                        interp.currentYaw = swimYaw;
+                        interp.targetYaw = swimYaw;
+                        interp.currentPitch = tiltPitch;
+                        interp.targetPitch = tiltPitch;
+                        interp.currentRoll = tiltRoll;
+                        interp.targetRoll = tiltRoll;
+                    }
+
+                    var cm = capi.ModLoader.GetModSystem<ClothManager>();
+                    var rope = cm?.GetClothSystemAttachedToEntity(bobberEntityId);
+                    if (rope != null)
+                    {
+                        rope.LastPoint.Pos.Set(fx, fy, fz);
+                        rope.CanRip = false;
+                    }
+                }
+            }
+
+            // Big splash as a jumping fish leaves and re-enters the water
+            if (sim.Airborne != wasAirborne)
+            {
+                wasAirborne = sim.Airborne;
+                SpawnJumpSplash(fx, baseBobber.Y, fz, reentry: !sim.Airborne);
+            }
+            bool surfaceTrail = !sim.Airborne && sim.Behaviour != FishBehaviour.Dive;
+
             // 1. Water Wake & Expanding Surface Foam (continuous trail behind moving fish)
             rippleTimer += dt;
-            if (rippleTimer >= 0.045f)
+            if (surfaceTrail && rippleTimer >= 0.045f)
             {
                 rippleTimer = 0f;
                 var foam = new SimpleParticleProperties(
@@ -574,7 +697,7 @@ namespace AnglersArtOfFishing
 
             // 2. Sub-surface Fish Silhouette (dark aquatic shadow following fish body)
             shadowTimer += dt;
-            if (shadowTimer >= 0.08f)
+            if (surfaceTrail && shadowTimer >= 0.08f)
             {
                 shadowTimer = 0f;
                 var shadow = new SimpleParticleProperties(
@@ -596,12 +719,15 @@ namespace AnglersArtOfFishing
             float splashInterval = sim.Behaviour switch
             {
                 FishBehaviour.Dash => 0.05f,
+                FishBehaviour.Shake => 0.06f,
+                FishBehaviour.Run => 0.06f,
                 FishBehaviour.Windup => 0.07f,
                 FishBehaviour.Swim => 0.11f,
+                FishBehaviour.Dive => 0.25f,
                 _ => 0.18f
             };
 
-            if (splashTimer >= splashInterval)
+            if (!sim.Airborne && splashTimer >= splashInterval)
             {
                 splashTimer = 0f;
 
@@ -615,6 +741,21 @@ namespace AnglersArtOfFishing
                         minCount = 4f; maxCount = 8f;
                         minUp = 1.8f; maxUp = 3.3f;
                         horizSpread = 1.1f;
+                        break;
+                    case FishBehaviour.Run:
+                        minCount = 3f; maxCount = 6f;
+                        minUp = 1.2f; maxUp = 2.4f;
+                        horizSpread = 1.0f;
+                        break;
+                    case FishBehaviour.Shake:
+                        minCount = 2f; maxCount = 4f;
+                        minUp = 1.4f; maxUp = 2.6f;
+                        horizSpread = 0.5f;
+                        break;
+                    case FishBehaviour.Dive:
+                        minCount = 1f; maxCount = 1f;
+                        minUp = 0.3f; maxUp = 0.7f;
+                        horizSpread = 0.2f;
                         break;
                     case FishBehaviour.Windup:
                         minCount = 2f; maxCount = 4f;
@@ -647,7 +788,7 @@ namespace AnglersArtOfFishing
                 capi.World.SpawnParticles(drops);
 
                 // Bubbles churn underwater during active bursts
-                if (sim.Behaviour == FishBehaviour.Dash || sim.Behaviour == FishBehaviour.Windup)
+                if (sim.Behaviour == FishBehaviour.Dash || sim.Behaviour == FishBehaviour.Windup || sim.Behaviour == FishBehaviour.Dive)
                 {
                     var bubbles = new SimpleParticleProperties(
                         1f, 3f,
@@ -668,21 +809,74 @@ namespace AnglersArtOfFishing
             float soundInterval = sim.Behaviour switch
             {
                 FishBehaviour.Dash => 0.42f,
+                FishBehaviour.Shake => 0.35f,
+                FishBehaviour.Run => 0.5f,
                 FishBehaviour.Swim => 0.85f,
+                FishBehaviour.Dive => 1.6f,
                 _ => 1.4f
             };
 
-            if (soundTimer >= soundInterval)
+            if (!sim.Airborne && soundTimer >= soundInterval)
             {
                 soundTimer = 0f;
                 float vol = sim.Behaviour switch
                 {
                     FishBehaviour.Dash => 0.65f,
+                    FishBehaviour.Run => 0.5f,
+                    FishBehaviour.Shake => 0.4f,
                     FishBehaviour.Swim => 0.32f,
+                    FishBehaviour.Dive => 0.12f,
                     _ => 0.18f
                 };
                 capi.World.PlaySoundAt(new AssetLocation("game:sounds/player/swim"), fx, fy, fz, null, true, 20f, vol);
             }
+        }
+
+        void UpdateFishModel(float dt, double fx, double fz, float swimYaw, double rise)
+        {
+            // How far under the surface the fish swims: deep on dives, right at the top when spent or at the bank
+            double depth = sim.Behaviour switch
+            {
+                FishBehaviour.Dive => 1.1,
+                FishBehaviour.Tired => 0.05,
+                FishBehaviour.Shake => 0.12,
+                FishBehaviour.Dash or FishBehaviour.Run => 0.35,
+                _ => 0.25
+            };
+            if (sim.Distance < 0.15f) depth = Math.Min(depth, 0.06);
+            fishDepth += (float)(depth - fishDepth) * (1f - MathF.Exp(-3f * dt));
+
+            fishModel.Pos.Set(fx, baseBobber.Y - fishDepth + rise, fz);
+            fishModel.Yaw = swimYaw;
+            fishModel.Pitch = sim.Airborne ? 0.9f - 1.8f * sim.AirProgress      // nose up leaving the water, nose down re-entering
+                            : sim.Behaviour == FishBehaviour.Dive ? -0.5f : 0f;
+            fishModel.Roll = sim.Behaviour switch
+            {
+                FishBehaviour.Tired => 1.3f,                                   // rolls onto its side when spent
+                FishBehaviour.Shake => MathF.Sin(swimPhase) * 0.5f,
+                _ => MathF.Sin(swimPhase * 0.5f) * 0.12f
+            };
+        }
+
+        void SpawnJumpSplash(double x, double surfaceY, double z, bool reentry)
+        {
+            float size = 0.6f + 0.6f * sim.Power;
+            var splash = new SimpleParticleProperties(
+                12f * size, 20f * size,
+                ColorUtil.ToRgba(220, 238, 255, 255),
+                new Vec3d(x - 0.25 * size, surfaceY + 0.02, z - 0.25 * size),
+                new Vec3d(x + 0.25 * size, surfaceY + 0.12, z + 0.25 * size),
+                new Vec3f(-1.0f, reentry ? 2.6f : 1.8f, -1.0f),
+                new Vec3f(1.0f, reentry ? 4.6f : 3.4f, 1.0f),
+                0.7f, 1.0f, 0.10f, 0.26f, EnumParticleModel.Quad
+            );
+            splash.ShouldDieInLiquid = true;
+            capi.World.SpawnParticles(splash);
+
+            string sound = sim.Power >= 0.6f ? "game:sounds/environment/largesplash1"
+                         : sim.Power >= 0.3f ? "game:sounds/environment/mediumsplash"
+                         : "game:sounds/environment/smallsplash";
+            capi.World.PlaySoundAt(new AssetLocation(sound), x, surfaceY, z, null, true, 24f, reentry ? 0.9f : 0.6f);
         }
 
         void SpawnOutcomeEffects(FightOutcome outcome)
@@ -740,10 +934,33 @@ namespace AnglersArtOfFishing
 
         public void Dispose()
         {
+            capi.Event.UnregisterRenderer(motionRenderer, EnumRenderStage.Before);
             capi.Event.UnregisterRenderer(this, EnumRenderStage.Ortho);
+            capi.Event.UnregisterRenderer(fishModel, EnumRenderStage.Opaque);
+            fishModel.Dispose();
             ResetFishVisuals();
             ClearTextCache();
             white?.Dispose();
+        }
+
+        class BobberMotionRenderer : IRenderer
+        {
+            readonly FishingClient client;
+
+            public double RenderOrder => 0.95;
+            public int RenderRange => 9999;
+
+            public BobberMotionRenderer(FishingClient client)
+            {
+                this.client = client;
+            }
+
+            public void OnRenderFrame(float dt, EnumRenderStage stage)
+            {
+                client.OnBeforeRenderFrame(dt);
+            }
+
+            public void Dispose() { }
         }
     }
 }

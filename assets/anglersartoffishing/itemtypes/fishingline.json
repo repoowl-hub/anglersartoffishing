@@ -1,0 +1,43 @@
+{
+  "code": "fishingline",
+  "maxstacksize": 16,
+  "variantgroups": [
+    { "code": "type", "states": [ "braided", "waxed" ] }
+  ],
+  "attributesByType": {
+    "*-braided": {
+      "poleUpgrade": { "slot": "line", "snapBonus": 0.15 }
+    },
+    "*-waxed": {
+      "poleUpgrade": { "slot": "line", "snapBonus": 0.30 }
+    }
+  },
+  "shape": { "base": "anglersartoffishing:item/fishingline" },
+  "textures": {
+    "line": { "base": "anglersartoffishing:item/line-{type}" }
+  },
+  "creativeinventory": { "general": [ "*" ], "items": [ "*" ], "tools": [ "*" ] },
+  "guiTransform": {
+    "rotation": { "x": -30, "y": 45, "z": 0 },
+    "origin": { "x": 0.5, "y": 0.16, "z": 0.5 },
+    "scale": 3.2
+  },
+  "fpHandTransform": {
+    "translation": { "x": 0, "y": 0.1, "z": 0 },
+    "rotation": { "x": 0, "y": -30, "z": 0 },
+    "origin": { "x": 0.5, "y": 0.15, "z": 0.5 },
+    "scale": 1.6
+  },
+  "tpHandTransform": {
+    "translation": { "x": -0.8, "y": -0.2, "z": -0.6 },
+    "rotation": { "x": 0, "y": 0, "z": 0 },
+    "origin": { "x": 0.5, "y": 0.15, "z": 0.5 },
+    "scale": 0.6
+  },
+  "groundTransform": {
+    "translation": { "x": 0, "y": 0, "z": 0 },
+    "rotation": { "x": 0, "y": 0, "z": 0 },
+    "origin": { "x": 0.5, "y": 0, "z": 0.5 },
+    "scale": 2.4
+  }
+}

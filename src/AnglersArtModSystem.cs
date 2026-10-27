@@ -8,13 +8,13 @@ namespace AnglersArtOfFishing
     {
         public const string ChannelName = "anglersartoffishing";
 
-        public FishingServer Server { get; private set; }
+        public VanillaFightServer Server { get; private set; }
         public FishingClient Client { get; private set; }
 
         public override void Start(ICoreAPI api)
         {
             base.Start(api);
-            api.RegisterItemClass("AAFItemFishingRod", typeof(ItemFishingRod));
+            VanillaPolePatches.Apply(Mod.Info.ModID);
         }
 
         public override void AssetsLoaded(ICoreAPI api)
@@ -23,20 +23,29 @@ namespace AnglersArtOfFishing
             if (api.Side == EnumAppSide.Server) SpeciesRegistry.Load(api);
         }
 
+        public override void AssetsFinalize(ICoreAPI api)
+        {
+            base.AssetsFinalize(api);
+            if (api.Side == EnumAppSide.Server) FishingGear.ApplyLureTags(api);
+        }
+
         public override void StartServerSide(ICoreServerAPI api)
         {
             base.StartServerSide(api);
-            Server = new FishingServer(api);
+            Server = new VanillaFightServer(api);
+            VanillaPolePatches.Server = Server;
         }
 
         public override void StartClientSide(ICoreClientAPI api)
         {
             base.StartClientSide(api);
             Client = new FishingClient(api);
+            VanillaPolePatches.Client = Client;
         }
 
         public override void Dispose()
         {
+            VanillaPolePatches.Remove();
             Client?.Dispose();
             base.Dispose();
         }

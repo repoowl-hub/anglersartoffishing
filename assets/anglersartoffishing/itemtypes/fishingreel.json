@@ -1,0 +1,43 @@
+{
+  "code": "fishingreel",
+  "maxstacksize": 8,
+  "variantgroups": [
+    { "code": "metal", "states": [ "copper", "iron" ] }
+  ],
+  "attributesByType": {
+    "*-copper": {
+      "poleUpgrade": { "slot": "reel", "reelSpeedBonus": 0.10 }
+    },
+    "*-iron": {
+      "poleUpgrade": { "slot": "reel", "reelSpeedBonus": 0.20 }
+    }
+  },
+  "shape": { "base": "anglersartoffishing:item/fishingreel" },
+  "textures": {
+    "metal": { "base": "game:block/metal/sheet-plain/{metal}1" }
+  },
+  "creativeinventory": { "general": [ "*" ], "items": [ "*" ], "tools": [ "*" ] },
+  "guiTransform": {
+    "rotation": { "x": -20, "y": 60, "z": 0 },
+    "origin": { "x": 0.5, "y": 0.28, "z": 0.5 },
+    "scale": 2.6
+  },
+  "fpHandTransform": {
+    "translation": { "x": 0, "y": 0.05, "z": 0 },
+    "rotation": { "x": 0, "y": -30, "z": 0 },
+    "origin": { "x": 0.5, "y": 0.25, "z": 0.5 },
+    "scale": 1.4
+  },
+  "tpHandTransform": {
+    "translation": { "x": -0.8, "y": -0.25, "z": -0.6 },
+    "rotation": { "x": 0, "y": 0, "z": 0 },
+    "origin": { "x": 0.5, "y": 0.25, "z": 0.5 },
+    "scale": 0.55
+  },
+  "groundTransform": {
+    "translation": { "x": 0, "y": 0, "z": 0 },
+    "rotation": { "x": 0, "y": 0, "z": 0 },
+    "origin": { "x": 0.5, "y": 0, "z": 0.5 },
+    "scale": 2.0
+  }
+}

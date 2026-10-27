@@ -1,50 +1,452 @@
 [
   {
-    "Code": "minnow", "Name": "Minnow", "MinRodStrength": 1, "Weight": 3.0,
-    "Baits": { "grain": 3, "worm": 1.5 },
-    "MinSizeCm": 6, "MaxSizeCm": 12, "Power": 0.10, "StaminaSeconds": 5, "Aggression": 0.20,
-    "MinFightSeconds": 3, "BaseQuantity": 1
+    "Code": "freshwater-alewife-shad",
+    "Name": "Alewife Shad",
+    "Power": 0.12,
+    "StaminaSeconds": 5.0,
+    "Aggression": 0.20,
+    "Style": "Darter",
+    "MinFightSeconds": 3.0,
+    "CatchItem": "game:fishraw-freshwater-alewife-shad-adult"
   },
   {
-    "Code": "perch", "Name": "Perch", "MinRodStrength": 1, "Weight": 2.5,
-    "Baits": { "worm": 3, "grain": 1, "fishscrap": 1 },
-    "MinSizeCm": 15, "MaxSizeCm": 40, "Power": 0.22, "StaminaSeconds": 7, "Aggression": 0.35,
-    "MinFightSeconds": 4, "BaseQuantity": 1
+    "Code": "freshwater-chub-river",
+    "Name": "River Chub",
+    "Power": 0.10,
+    "StaminaSeconds": 5.0,
+    "Aggression": 0.20,
+    "Style": "Darter",
+    "MinFightSeconds": 3.0,
+    "CatchItem": "game:fishraw-freshwater-chub-river-adult"
   },
   {
-    "Code": "carp", "Name": "Carp", "MinRodStrength": 2, "Weight": 2.0,
-    "Baits": { "grain": 3, "worm": 1 },
-    "MinSizeCm": 30, "MaxSizeCm": 80, "Power": 0.35, "StaminaSeconds": 11, "Aggression": 0.25,
-    "MinFightSeconds": 6, "BaseQuantity": 2
+    "Code": "freshwater-crappie-black",
+    "Name": "Black Crappie",
+    "Power": 0.18,
+    "StaminaSeconds": 6.0,
+    "Aggression": 0.25,
+    "Style": "Darter",
+    "MinFightSeconds": 4.0,
+    "CatchItem": "game:fishraw-freshwater-crappie-black-adult"
   },
   {
-    "Code": "trout", "Name": "Trout", "MinRodStrength": 2, "Weight": 2.0,
-    "Baits": { "worm": 2, "spinner": 3 },
-    "MinSizeCm": 25, "MaxSizeCm": 70, "Power": 0.40, "StaminaSeconds": 10, "Aggression": 0.50,
-    "MinFightSeconds": 6, "BaseQuantity": 2
+    "Code": "freshwater-crappie-white",
+    "Name": "White Crappie",
+    "Power": 0.16,
+    "StaminaSeconds": 6.0,
+    "Aggression": 0.25,
+    "Style": "Darter",
+    "MinFightSeconds": 4.0,
+    "CatchItem": "game:fishraw-freshwater-crappie-white-adult"
   },
   {
-    "Code": "pike", "Name": "Northern Pike", "MinRodStrength": 2, "Weight": 1.2,
-    "Baits": { "fishscrap": 3, "spinner": 2 },
-    "MinSizeCm": 45, "MaxSizeCm": 110, "Power": 0.50, "StaminaSeconds": 12, "Aggression": 0.65,
-    "MinFightSeconds": 7, "BaseQuantity": 3
+    "Code": "freshwater-perch-european",
+    "Name": "European Perch",
+    "Power": 0.24,
+    "StaminaSeconds": 7.0,
+    "Aggression": 0.35,
+    "Style": "Darter",
+    "MinFightSeconds": 4.0,
+    "CatchItem": "game:fishraw-freshwater-perch-european-adult"
   },
   {
-    "Code": "catfish", "Name": "Catfish", "MinRodStrength": 3, "Weight": 1.0,
-    "Baits": { "fishscrap": 3, "worm": 1.5 },
-    "MinSizeCm": 60, "MaxSizeCm": 150, "Power": 0.58, "StaminaSeconds": 16, "Aggression": 0.40,
-    "MinFightSeconds": 10, "BaseQuantity": 4
+    "Code": "freshwater-perch-yellow",
+    "Name": "Yellow Perch",
+    "Power": 0.22,
+    "StaminaSeconds": 7.0,
+    "Aggression": 0.35,
+    "Style": "Darter",
+    "MinFightSeconds": 4.0,
+    "CatchItem": "game:fishraw-freshwater-perch-yellow-adult"
   },
   {
-    "Code": "sturgeon", "Name": "Sturgeon", "MinRodStrength": 3, "Weight": 0.6,
-    "Baits": { "fishscrap": 2, "grain": 1 },
-    "MinSizeCm": 90, "MaxSizeCm": 220, "Power": 0.68, "StaminaSeconds": 20, "Aggression": 0.50,
-    "MinFightSeconds": 12, "BaseQuantity": 6
+    "Code": "freshwater-piranha-black",
+    "Name": "Black Piranha",
+    "Power": 0.32,
+    "StaminaSeconds": 8.0,
+    "Aggression": 0.70,
+    "Style": "Ambusher",
+    "MinFightSeconds": 5.0,
+    "CatchItem": "game:fishraw-freshwater-piranha-black-adult"
   },
   {
-    "Code": "taimen", "Name": "Great Taimen", "MinRodStrength": 3, "Weight": 0.4,
-    "Baits": { "spinner": 3, "fishscrap": 1 },
-    "MinSizeCm": 100, "MaxSizeCm": 200, "Power": 0.75, "StaminaSeconds": 20, "Aggression": 0.75,
-    "MinFightSeconds": 12, "BaseQuantity": 6
+    "Code": "freshwater-piranha-red",
+    "Name": "Red-Bellied Piranha",
+    "Power": 0.28,
+    "StaminaSeconds": 7.0,
+    "Aggression": 0.75,
+    "Style": "Ambusher",
+    "MinFightSeconds": 5.0,
+    "CatchItem": "game:fishraw-freshwater-piranha-red-adult"
+  },
+  {
+    "Code": "freshwater-trout-brown",
+    "Name": "Brown Trout",
+    "Power": 0.38,
+    "StaminaSeconds": 10.0,
+    "Aggression": 0.50,
+    "Style": "Headshaker",
+    "MinFightSeconds": 6.0,
+    "CatchItem": "game:fishraw-freshwater-trout-brown-adult"
+  },
+  {
+    "Code": "freshwater-trout-rainbow",
+    "Name": "Rainbow Trout",
+    "Power": 0.40,
+    "StaminaSeconds": 10.0,
+    "Aggression": 0.55,
+    "Style": "Jumper",
+    "MinFightSeconds": 6.0,
+    "CatchItem": "game:fishraw-freshwater-trout-rainbow-adult"
+  },
+  {
+    "Code": "freshwater-bass-largemouth",
+    "Name": "Largemouth Bass",
+    "Power": 0.38,
+    "StaminaSeconds": 10.0,
+    "Aggression": 0.45,
+    "Style": "Jumper",
+    "MinFightSeconds": 6.0,
+    "CatchItem": "game:fishraw-freshwater-bass-largemouth-adult"
+  },
+  {
+    "Code": "freshwater-bass-smallmouth",
+    "Name": "Smallmouth Bass",
+    "Power": 0.36,
+    "StaminaSeconds": 9.0,
+    "Aggression": 0.50,
+    "Style": "Jumper",
+    "MinFightSeconds": 6.0,
+    "CatchItem": "game:fishraw-freshwater-bass-smallmouth-adult"
+  },
+  {
+    "Code": "freshwater-carp-common",
+    "Name": "Common Carp",
+    "Power": 0.35,
+    "StaminaSeconds": 10.9,
+    "Aggression": 0.25,
+    "Style": "Runner",
+    "MinFightSeconds": 6.0,
+    "CatchItem": "game:fishraw-freshwater-carp-common-adult"
+  },
+  {
+    "Code": "freshwater-carp-grass",
+    "Name": "Grass Carp",
+    "Power": 0.34,
+    "StaminaSeconds": 10.9,
+    "Aggression": 0.25,
+    "Style": "Runner",
+    "MinFightSeconds": 6.0,
+    "CatchItem": "game:fishraw-freshwater-carp-grass-adult"
+  },
+  {
+    "Code": "freshwater-catfish-blue",
+    "Name": "Blue Catfish",
+    "Power": 0.60,
+    "StaminaSeconds": 12.7,
+    "Aggression": 0.40,
+    "Style": "Bulldog",
+    "MinFightSeconds": 9.0,
+    "CatchItem": "game:fishraw-freshwater-catfish-blue-adult"
+  },
+  {
+    "Code": "freshwater-catfish-channel",
+    "Name": "Channel Catfish",
+    "Power": 0.55,
+    "StaminaSeconds": 12.2,
+    "Aggression": 0.40,
+    "Style": "Bulldog",
+    "MinFightSeconds": 8.0,
+    "CatchItem": "game:fishraw-freshwater-catfish-channel-adult"
+  },
+  {
+    "Code": "freshwater-pickerel-chain",
+    "Name": "Chain Pickerel",
+    "Power": 0.42,
+    "StaminaSeconds": 10.0,
+    "Aggression": 0.60,
+    "Style": "Ambusher",
+    "MinFightSeconds": 6.0,
+    "CatchItem": "game:fishraw-freshwater-pickerel-chain-adult"
+  },
+  {
+    "Code": "freshwater-salmon-coho",
+    "Name": "Coho Salmon",
+    "Power": 0.48,
+    "StaminaSeconds": 11.3,
+    "Aggression": 0.60,
+    "Style": "Runner",
+    "MinFightSeconds": 7.0,
+    "CatchItem": "game:fishraw-freshwater-salmon-coho-adult"
+  },
+  {
+    "Code": "freshwater-tilapia-nile",
+    "Name": "Nile Tilapia",
+    "Power": 0.20,
+    "StaminaSeconds": 7.0,
+    "Aggression": 0.20,
+    "Style": "Darter",
+    "MinFightSeconds": 4.0,
+    "CatchItem": "game:fishraw-freshwater-tilapia-nile-adult"
+  },
+  {
+    "Code": "freshwater-tilapia-red",
+    "Name": "Redbelly Tilapia",
+    "Power": 0.20,
+    "StaminaSeconds": 7.0,
+    "Aggression": 0.20,
+    "Style": "Darter",
+    "MinFightSeconds": 4.0,
+    "CatchItem": "game:fishraw-freshwater-tilapia-red-adult"
+  },
+  {
+    "Code": "freshwater-walleye-common",
+    "Name": "Walleye",
+    "Power": 0.44,
+    "StaminaSeconds": 10.4,
+    "Aggression": 0.45,
+    "Style": "Headshaker",
+    "MinFightSeconds": 6.0,
+    "CatchItem": "game:fishraw-freshwater-walleye-common-adult"
+  },
+  {
+    "Code": "freshwater-pike-northern",
+    "Name": "Northern Pike",
+    "Power": 0.52,
+    "StaminaSeconds": 11.3,
+    "Aggression": 0.65,
+    "Style": "Ambusher",
+    "MinFightSeconds": 7.0,
+    "CatchItem": "game:fishraw-freshwater-pike-northern-adult"
+  },
+  {
+    "Code": "freshwater-arapaima-arapaima",
+    "Name": "Arapaima",
+    "Power": 0.78,
+    "StaminaSeconds": 15.4,
+    "Aggression": 0.65,
+    "Style": "Jumper",
+    "MinFightSeconds": 12.0,
+    "CatchItem": "game:fishraw-freshwater-arapaima-arapaima-adult"
+  },
+  {
+    "Code": "freshwater-arapaima-gigas",
+    "Name": "Pirarucu",
+    "Power": 0.82,
+    "StaminaSeconds": 16.3,
+    "Aggression": 0.70,
+    "Style": "Jumper",
+    "MinFightSeconds": 14.0,
+    "CatchItem": "game:fishraw-freshwater-arapaima-gigas-adult"
+  },
+  {
+    "Code": "freshwater-sheatfish-black",
+    "Name": "Black Sheatfish",
+    "Power": 0.74,
+    "StaminaSeconds": 14.5,
+    "Aggression": 0.55,
+    "Style": "Bulldog",
+    "MinFightSeconds": 12.0,
+    "CatchItem": "game:fishraw-freshwater-sheatfish-black-adult"
+  },
+  {
+    "Code": "freshwater-sheatfish-white",
+    "Name": "Wels Catfish",
+    "Power": 0.76,
+    "StaminaSeconds": 15.4,
+    "Aggression": 0.60,
+    "Style": "Bulldog",
+    "MinFightSeconds": 12.0,
+    "CatchItem": "game:fishraw-freshwater-sheatfish-white-adult"
+  },
+  {
+    "Code": "saltwater-bream-sea",
+    "Name": "Sea Bream",
+    "Power": 0.22,
+    "StaminaSeconds": 7.0,
+    "Aggression": 0.30,
+    "Style": "Darter",
+    "MinFightSeconds": 4.0,
+    "CatchItem": "game:fishraw-saltwater-bream-sea-adult"
+  },
+  {
+    "Code": "saltwater-gurnard-cape",
+    "Name": "Cape Gurnard",
+    "Power": 0.20,
+    "StaminaSeconds": 7.0,
+    "Aggression": 0.25,
+    "Style": "Headshaker",
+    "MinFightSeconds": 4.0,
+    "CatchItem": "game:fishraw-saltwater-gurnard-cape-adult"
+  },
+  {
+    "Code": "saltwater-haddock-common",
+    "Name": "Haddock",
+    "Power": 0.28,
+    "StaminaSeconds": 8.0,
+    "Aggression": 0.30,
+    "Style": "Headshaker",
+    "MinFightSeconds": 5.0,
+    "CatchItem": "game:fishraw-saltwater-haddock-common-adult"
+  },
+  {
+    "Code": "saltwater-hake-silver",
+    "Name": "Silver Hake",
+    "Power": 0.26,
+    "StaminaSeconds": 8.0,
+    "Aggression": 0.35,
+    "Style": "Headshaker",
+    "MinFightSeconds": 5.0,
+    "CatchItem": "game:fishraw-saltwater-hake-silver-adult"
+  },
+  {
+    "Code": "saltwater-herring-atlantic",
+    "Name": "Atlantic Herring",
+    "Power": 0.14,
+    "StaminaSeconds": 5.0,
+    "Aggression": 0.25,
+    "Style": "Darter",
+    "MinFightSeconds": 3.0,
+    "CatchItem": "game:fishraw-saltwater-herring-atlantic-adult"
+  },
+  {
+    "Code": "saltwater-mackerel-atlantic",
+    "Name": "Atlantic Mackerel",
+    "Power": 0.26,
+    "StaminaSeconds": 8.0,
+    "Aggression": 0.50,
+    "Style": "Runner",
+    "MinFightSeconds": 5.0,
+    "CatchItem": "game:fishraw-saltwater-mackerel-atlantic-adult"
+  },
+  {
+    "Code": "saltwater-pollock-alaska",
+    "Name": "Alaska Pollock",
+    "Power": 0.30,
+    "StaminaSeconds": 8.0,
+    "Aggression": 0.30,
+    "Style": "Headshaker",
+    "MinFightSeconds": 5.0,
+    "CatchItem": "game:fishraw-saltwater-pollock-alaska-adult"
+  },
+  {
+    "Code": "saltwater-perch-pacific",
+    "Name": "Pacific Ocean Perch",
+    "Power": 0.28,
+    "StaminaSeconds": 8.0,
+    "Aggression": 0.35,
+    "Style": "Darter",
+    "MinFightSeconds": 5.0,
+    "CatchItem": "game:fishraw-saltwater-perch-pacific-adult"
+  },
+  {
+    "Code": "saltwater-barracuda-great",
+    "Name": "Great Barracuda",
+    "Power": 0.62,
+    "StaminaSeconds": 12.2,
+    "Aggression": 0.75,
+    "Style": "Ambusher",
+    "MinFightSeconds": 9.0,
+    "CatchItem": "game:fishraw-saltwater-barracuda-great-adult"
+  },
+  {
+    "Code": "saltwater-grouper-black",
+    "Name": "Black Grouper",
+    "Power": 0.58,
+    "StaminaSeconds": 12.7,
+    "Aggression": 0.40,
+    "Style": "Bulldog",
+    "MinFightSeconds": 9.0,
+    "CatchItem": "game:fishraw-saltwater-grouper-black-adult"
+  },
+  {
+    "Code": "saltwater-salmon-pink",
+    "Name": "Pink Salmon",
+    "Power": 0.46,
+    "StaminaSeconds": 10.9,
+    "Aggression": 0.60,
+    "Style": "Runner",
+    "MinFightSeconds": 7.0,
+    "CatchItem": "game:fishraw-saltwater-salmon-pink-adult"
+  },
+  {
+    "Code": "saltwater-snapper-red",
+    "Name": "Red Snapper",
+    "Power": 0.48,
+    "StaminaSeconds": 10.9,
+    "Aggression": 0.45,
+    "Style": "Headshaker",
+    "MinFightSeconds": 7.0,
+    "CatchItem": "game:fishraw-saltwater-snapper-red-adult"
+  },
+  {
+    "Code": "saltwater-tuna-skipjack",
+    "Name": "Skipjack Tuna",
+    "Power": 0.65,
+    "StaminaSeconds": 13.2,
+    "Aggression": 0.80,
+    "Style": "Runner",
+    "MinFightSeconds": 10.0,
+    "CatchItem": "game:fishraw-saltwater-tuna-skipjack-adult"
+  },
+  {
+    "Code": "saltwater-wolf-bering",
+    "Name": "Bering Wolffish",
+    "Power": 0.54,
+    "StaminaSeconds": 11.8,
+    "Aggression": 0.55,
+    "Style": "Headshaker",
+    "MinFightSeconds": 8.0,
+    "CatchItem": "game:fishraw-saltwater-wolf-bering-adult"
+  },
+  {
+    "Code": "saltwater-amberjack-yellowtail",
+    "Name": "Yellowtail Amberjack",
+    "Power": 0.68,
+    "StaminaSeconds": 13.6,
+    "Aggression": 0.70,
+    "Style": "Bulldog",
+    "MinFightSeconds": 11.0,
+    "CatchItem": "game:fishraw-saltwater-amberjack-yellowtail-adult"
+  },
+  {
+    "Code": "saltwater-mahi-mahi-common",
+    "Name": "Mahi-Mahi",
+    "Power": 0.66,
+    "StaminaSeconds": 13.2,
+    "Aggression": 0.75,
+    "Style": "Jumper",
+    "MinFightSeconds": 10.0,
+    "CatchItem": "game:fishraw-saltwater-mahi-mahi-common-adult"
+  },
+  {
+    "Code": "saltwater-wreckfish-atlantic",
+    "Name": "Atlantic Wreckfish",
+    "Power": 0.70,
+    "StaminaSeconds": 14.1,
+    "Aggression": 0.45,
+    "Style": "Bulldog",
+    "MinFightSeconds": 11.0,
+    "CatchItem": "game:fishraw-saltwater-wreckfish-atlantic-adult"
+  },
+  {
+    "Code": "saltwater-coelacanth-common",
+    "Name": "Coelacanth",
+    "Power": 0.75,
+    "StaminaSeconds": 15.4,
+    "Aggression": 0.50,
+    "Style": "Bulldog",
+    "MinFightSeconds": 13.0,
+    "CatchItem": "game:fishraw-saltwater-coelacanth-common-adult"
+  },
+  {
+    "Code": "saltwater-sturgeon-atlantic",
+    "Name": "Atlantic Sturgeon",
+    "Power": 0.72,
+    "StaminaSeconds": 14.9,
+    "Aggression": 0.45,
+    "Style": "Bulldog",
+    "MinFightSeconds": 12.0,
+    "CatchItem": "game:fishraw-saltwater-sturgeon-atlantic-adult"
   }
 ]

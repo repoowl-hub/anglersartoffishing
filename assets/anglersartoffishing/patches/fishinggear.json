@@ -1,0 +1,20 @@
+[
+  {
+    "file": "game:recipes/grid/fishinggear.json",
+    "op": "add",
+    "path": "/2/copyAttributesFrom",
+    "value": "P"
+  },
+  {
+    "file": "game:recipes/grid/fishinggear.json",
+    "op": "add",
+    "path": "/3/copyAttributesFrom",
+    "value": "P"
+  },
+  {
+    "file": "game:recipes/grid/fishinggear.json",
+    "op": "add",
+    "path": "/4/copyAttributesFrom",
+    "value": "P"
+  }
+]

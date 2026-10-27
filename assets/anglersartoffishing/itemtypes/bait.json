@@ -3,14 +3,57 @@
   "maxstacksize": 32,
   "storageFlags": 257,
   "variantgroups": [
-    { "code": "type", "states": [ "worm", "grain", "fishscrap", "spinner" ] }
+    { "code": "type", "states": [ "spinner", "popper", "jig", "spoon" ] }
   ],
   "attributesByType": {
-    "*-worm": { "baitType": "worm", "biteSpeed": 1.0, "consumeChance": 1.0 },
-    "*-grain": { "baitType": "grain", "biteSpeed": 0.85, "consumeChance": 1.0 },
-    "*-fishscrap": { "baitType": "fishscrap", "biteSpeed": 1.2, "consumeChance": 1.0 },
-    "*-spinner": { "baitType": "spinner", "biteSpeed": 1.5, "consumeChance": 0.25 }
+    "*-spinner": {
+      "isFishBait": true,
+      "consumeChance": 0.05,
+      "baitTag": "bait-lure-spinner",
+      "lureStyles": [ "Runner" ]
+    },
+    "*-popper": {
+      "isFishBait": true,
+      "consumeChance": 0.05,
+      "baitTag": "bait-lure-popper",
+      "lureStyles": [ "Jumper" ]
+    },
+    "*-jig": {
+      "isFishBait": true,
+      "consumeChance": 0.05,
+      "baitTag": "bait-lure-jig",
+      "lureStyles": [ "Bulldog" ]
+    },
+    "*-spoon": {
+      "isFishBait": true,
+      "consumeChance": 0.05,
+      "baitTag": "bait-lure-spoon",
+      "lureStyles": [ "Ambusher" ]
+    }
   },
-  "texture": { "base": "item/bait-{type}" },
-  "creativeinventory": { "general": [ "*" ], "items": [ "*" ] }
+  "shape": { "base": "anglersartoffishing:item/lure-{type}" },
+  "creativeinventory": { "general": [ "*" ], "items": [ "*" ], "tools": [ "*" ] },
+  "guiTransform": {
+    "rotation": { "x": -30, "y": 45, "z": 0 },
+    "origin": { "x": 0.5, "y": 0.12, "z": 0.5 },
+    "scale": 3.4
+  },
+  "fpHandTransform": {
+    "translation": { "x": 0, "y": 0.1, "z": 0 },
+    "rotation": { "x": 0, "y": -60, "z": 0 },
+    "origin": { "x": 0.5, "y": 0.1, "z": 0.5 },
+    "scale": 1.8
+  },
+  "tpHandTransform": {
+    "translation": { "x": -0.78, "y": -0.15, "z": -0.6 },
+    "rotation": { "x": 90, "y": -37, "z": 0 },
+    "origin": { "x": 0.5, "y": 0, "z": 0.5 },
+    "scale": 0.6
+  },
+  "groundTransform": {
+    "translation": { "x": 0, "y": 0, "z": 0 },
+    "rotation": { "x": 0, "y": 0, "z": 0 },
+    "origin": { "x": 0.5, "y": 0, "z": 0.5 },
+    "scale": 2.6
+  }
 }

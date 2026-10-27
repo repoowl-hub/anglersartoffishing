@@ -1,69 +1,239 @@
 [
   {
-    "ingredientPattern": "S_T,_ST,S_T",
-    "width": 3,
-    "height": 3,
-    "ingredients": {
-      "S": { "type": "item", "code": "game:stick" },
-      "T": { "type": "item", "code": "game:flaxtwine" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:fishingrod-crude" }
-  },
-  {
-    "ingredientPattern": "_IR,_RI,R__",
-    "width": 3,
-    "height": 3,
-    "ingredients": {
-      "R": { "type": "item", "code": "anglersartoffishing:fishingrod-crude", "isTool": false },
-      "I": { "type": "item", "code": "game:ingot-copper" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:fishingrod-sturdy" }
-  },
-  {
-    "ingredientPattern": "_II,_RI,R__",
-    "width": 3,
-    "height": 3,
-    "ingredients": {
-      "R": { "type": "item", "code": "anglersartoffishing:fishingrod-sturdy" },
-      "I": { "type": "item", "code": "game:ingot-iron" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:fishingrod-master" }
-  },
-  {
-    "ingredientPattern": "R",
-    "width": 1,
-    "height": 1,
-    "ingredients": {
-      "R": { "type": "item", "code": "game:rot" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:bait-worm", "quantity": 2 }
-  },
-  {
-    "ingredientPattern": "G",
-    "width": 1,
-    "height": 1,
-    "ingredients": {
-      "G": { "type": "item", "code": "game:grain-*" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:bait-grain", "quantity": 2 }
-  },
-  {
-    "ingredientPattern": "F",
-    "width": 1,
-    "height": 1,
-    "ingredients": {
-      "F": { "type": "item", "code": "game:fish-raw" }
-    },
-    "output": { "type": "item", "code": "anglersartoffishing:bait-fishscrap", "quantity": 4 }
-  },
-  {
     "ingredientPattern": "I,T",
     "width": 1,
     "height": 2,
     "ingredients": {
-      "I": { "type": "item", "code": "game:ingot-copper" },
-      "T": { "type": "item", "code": "game:flaxtwine" }
+      "I": {
+        "type": "item",
+        "code": "game:ingot-copper"
+      },
+      "T": {
+        "type": "item",
+        "code": "game:flaxtwine"
+      }
     },
-    "output": { "type": "item", "code": "anglersartoffishing:bait-spinner", "quantity": 3 }
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:bait-spinner",
+      "quantity": 3
+    }
+  },
+  {
+    "ingredientPattern": "F,S,C",
+    "width": 1,
+    "height": 3,
+    "ingredients": {
+      "F": {
+        "type": "item",
+        "code": "game:feather"
+      },
+      "S": {
+        "type": "item",
+        "code": "game:stick"
+      },
+      "C": {
+        "type": "item",
+        "code": "game:metalbit-copper"
+      }
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:bait-popper",
+      "quantity": 2
+    }
+  },
+  {
+    "ingredientPattern": "L,F,C",
+    "width": 1,
+    "height": 3,
+    "ingredients": {
+      "L": {
+        "type": "item",
+        "code": "game:metalbit-lead"
+      },
+      "F": {
+        "type": "item",
+        "code": "game:feather"
+      },
+      "C": {
+        "type": "item",
+        "code": "game:metalbit-copper"
+      }
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:bait-jig",
+      "quantity": 2
+    }
+  },
+  {
+    "ingredientPattern": "B,B,C",
+    "width": 1,
+    "height": 3,
+    "ingredients": {
+      "B": {
+        "type": "item",
+        "code": "game:metalbit-tinbronze"
+      },
+      "C": {
+        "type": "item",
+        "code": "game:metalbit-copper"
+      }
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:bait-spoon",
+      "quantity": 2
+    }
+  },
+  {
+    "name": "fishingpole-lure",
+    "recipeGroup": 2,
+    "ingredientPattern": "P,B",
+    "shapeless": true,
+    "copyAttributesFrom": "P",
+    "averageDurability": false,
+    "ingredients": {
+      "P": {
+        "type": "item",
+        "code": "game:fishingpole-simple-{type}"
+      },
+      "B": {
+        "type": "item",
+        "code": "anglersartoffishing:bait-*"
+      }
+    },
+    "width": 1,
+    "height": 2,
+    "output": {
+      "type": "item",
+      "code": "game:fishingpole-simple-{type}"
+    },
+    "allowedVariants": {
+      "type": [
+        "wood",
+        "bamboo"
+      ]
+    }
+  },
+  {
+    "ingredientPattern": "TTT",
+    "width": 3,
+    "height": 1,
+    "ingredients": {
+      "T": {
+        "type": "item",
+        "code": "game:flaxtwine"
+      }
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:fishingline-braided"
+    }
+  },
+  {
+    "ingredientPattern": "L,W",
+    "width": 1,
+    "height": 2,
+    "ingredients": {
+      "L": {
+        "type": "item",
+        "code": "anglersartoffishing:fishingline-braided"
+      },
+      "W": {
+        "type": "item",
+        "code": "game:beeswax"
+      }
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:fishingline-waxed"
+    }
+  },
+  {
+    "ingredientPattern": "I,S",
+    "width": 1,
+    "height": 2,
+    "ingredients": {
+      "I": {
+        "type": "item",
+        "code": "game:ingot-{metal}"
+      },
+      "S": {
+        "type": "item",
+        "code": "game:stick"
+      }
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:fishingreel-{metal}"
+    },
+    "allowedVariants": {
+      "metal": [
+        "copper",
+        "iron"
+      ]
+    }
+  },
+  {
+    "name": "fishingpole-line",
+    "recipeGroup": 3,
+    "ingredientPattern": "P,U",
+    "shapeless": true,
+    "copyAttributesFrom": "P",
+    "averageDurability": false,
+    "ingredients": {
+      "P": {
+        "type": "item",
+        "code": "game:fishingpole-simple-{type}"
+      },
+      "U": {
+        "type": "item",
+        "code": "anglersartoffishing:fishingline-*"
+      }
+    },
+    "width": 1,
+    "height": 2,
+    "output": {
+      "type": "item",
+      "code": "game:fishingpole-simple-{type}"
+    },
+    "allowedVariants": {
+      "type": [
+        "wood",
+        "bamboo"
+      ]
+    }
+  },
+  {
+    "name": "fishingpole-reel",
+    "recipeGroup": 3,
+    "ingredientPattern": "P,U",
+    "shapeless": true,
+    "copyAttributesFrom": "P",
+    "averageDurability": false,
+    "ingredients": {
+      "P": {
+        "type": "item",
+        "code": "game:fishingpole-simple-{type}"
+      },
+      "U": {
+        "type": "item",
+        "code": "anglersartoffishing:fishingreel-*"
+      }
+    },
+    "width": 1,
+    "height": 2,
+    "output": {
+      "type": "item",
+      "code": "game:fishingpole-simple-{type}"
+    },
+    "allowedVariants": {
+      "type": [
+        "wood",
+        "bamboo"
+      ]
+    }
   }
 ]

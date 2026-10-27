@@ -36,6 +36,8 @@ namespace AnglersArtOfFishing
         float flash; // 0..1 white flash on state changes
 
         readonly BobberMotionRenderer motionRenderer;
+        readonly FishModelRenderer fishModel;
+        float fishDepth = 0.25f;
 
         // In-world water animation
         Vec3d baseBobber;
@@ -48,6 +50,7 @@ namespace AnglersArtOfFishing
         float shadowTimer;
         float soundTimer;
         float biteSplashTimer;
+        bool wasAirborne;
 
         // Rendering resources
         LoadedTexture white;
@@ -78,6 +81,8 @@ namespace AnglersArtOfFishing
             motionRenderer = new BobberMotionRenderer(this);
             api.Event.RegisterRenderer(motionRenderer, EnumRenderStage.Before, "anglersartoffishing-motion");
             api.Event.RegisterRenderer(this, EnumRenderStage.Ortho, "anglersartoffishing-hud");
+            fishModel = new FishModelRenderer(api);
+            api.Event.RegisterRenderer(fishModel, EnumRenderStage.Opaque, "anglersartoffishing-fish");
         }
 
         // ------------------------------------------------------------------ network / input
@@ -102,18 +107,27 @@ namespace AnglersArtOfFishing
                     sim = null;
                     bobberEntityId = 0;
                     ResetFishVisuals();
+                    // The server ran StopFishing, but the player's own animations are client side and the client never
+                    // ran it (clicks are blocked during the fight), so drop the pole-holding stance here
+                    capi.World.Player?.Entity?.AnimManager?.StopAnimation("fishingpole-idle");
+                    VanillaPolePatches.HiddenFishEntityId = 0;
                     break;
                 case FishingPhase.Fight:
                     bobberEntityId = p.BobberEntityId;
+                    fishModel.Load(p.FishEntityCode);
+                    VanillaPolePatches.HiddenFishEntityId = p.HiddenFishEntityId;
+                    fishDepth = 0.6f;
                     sim = new FightSimulation(new FightParams
                     {
                         Power = p.Power,
                         StaminaSeconds = p.StaminaSeconds,
                         Aggression = p.Aggression,
+                        Style = (FightStyle)p.Style,
                         RodMargin = p.RodMargin,
                         ReelSpeed = p.ReelSpeed,
                         Forgiveness = p.Forgiveness,
-                        StartDistance = p.StartDistance
+                        StartDistance = p.StartDistance,
+                        SlackEscapeSeconds = p.SlackEscapeSeconds
                     });
                     sim.BehaviourChanged += _ => flash = 0.6f;
                     reported = FightOutcome.None;
@@ -379,10 +393,12 @@ namespace AnglersArtOfFishing
             rippleTimer = 0f;
             shadowTimer = 0f;
             soundTimer = 0f;
+            wasAirborne = false;
         }
 
         void ResetFishVisuals()
         {
+            fishModel?.Unload();
             currentFishPos = null;
             castOrigin = null;
             baseBobber = null;
@@ -529,6 +545,10 @@ namespace AnglersArtOfFishing
             float swimSpeed = sim.Behaviour switch
             {
                 FishBehaviour.Dash => 22f,
+                FishBehaviour.Run => 18f,
+                FishBehaviour.Shake => 42f,   // rapid head-shaking
+                FishBehaviour.Dive => 6f,
+                FishBehaviour.Jump => 12f,
                 FishBehaviour.Windup => 32f,
                 FishBehaviour.Tired => 4.5f,
                 FishBehaviour.Recover => 5.5f,
@@ -537,7 +557,7 @@ namespace AnglersArtOfFishing
             swimPhase += dt * swimSpeed;
 
             // Forward/back darting surge
-            double surge = sim.Behaviour == FishBehaviour.Dash
+            double surge = sim.Behaviour == FishBehaviour.Dash || sim.Behaviour == FishBehaviour.Run
                 ? MathF.Sin(swimPhase * 0.5f) * 0.45
                 : MathF.Sin(swimPhase * 0.5f) * 0.22;
 
@@ -549,6 +569,9 @@ namespace AnglersArtOfFishing
             double lateralWiggle = sim.Behaviour switch
             {
                 FishBehaviour.Dash => MathF.Sin(swimPhase) * 0.55,
+                FishBehaviour.Run => MathF.Sin(swimPhase) * 0.45,
+                FishBehaviour.Shake => MathF.Sin(swimPhase) * 0.12,   // tight, violent side-to-side
+                FishBehaviour.Dive => MathF.Sin(swimPhase) * 0.10,
                 FishBehaviour.Windup => MathF.Sin(swimPhase) * 0.15, // rapid nervous vibration
                 FishBehaviour.Tired => MathF.Sin(swimPhase) * 0.20,
                 _ => MathF.Sin(swimPhase) * 0.38
@@ -558,11 +581,23 @@ namespace AnglersArtOfFishing
 
             // Vertical bobbing and line tension dive
             double dip = Math.Clamp(sim.Tension * 0.16 + (sim.Behaviour == FishBehaviour.Dash ? 0.10 : 0.0), 0.0, 0.28);
-            double thrash = MathF.Sin(swimPhase * 2.2f) * 0.035;
+            double thrash = MathF.Sin(swimPhase * 2.2f) * (sim.Behaviour == FishBehaviour.Shake ? 0.07 : 0.035);
+            bool windingUp = sim.Behaviour == FishBehaviour.Windup;
+
+            // Diving fish drag the bobber well under; a fish about to dive starts pulling it down
+            if (sim.Behaviour == FishBehaviour.Dive) dip = 0.42 + 0.06 * MathF.Sin(swimPhase * 0.7f);
+            else if (windingUp && sim.NextAction == FishBehaviour.Dive) dip += 0.18 * sim.BehaviourProgress;
+            // A fish about to jump rises towards the surface
+            else if (windingUp && sim.NextAction == FishBehaviour.Jump) dip *= 1.0 - 0.8 * sim.BehaviourProgress;
+
+            // Jumping fish leave the water in an arc - bigger fish leap higher
+            double rise = sim.Airborne ? MathF.Sin(MathF.PI * sim.AirProgress) * (0.5 + 0.9 * sim.Power) : 0.0;
 
             // World coordinates on water surface
             double targetX = castOrigin.X + fwdX * (targetDist + surge) + rightX * targetLateral;
-            double targetY = baseBobber.Y - dip + thrash;
+            // With the real fish model on show the fish itself leaps; otherwise the bobber stands in for it
+            bool showFish = fishModel.Loaded;
+            double targetY = baseBobber.Y - dip + (sim.Airborne ? 0.0 : thrash) + (showFish ? 0.0 : rise);
             double targetZ = castOrigin.Z + fwdZ * (targetDist + surge) + rightZ * targetLateral;
 
             double prevX = currentFishPos?.X ?? targetX;
@@ -574,7 +609,7 @@ namespace AnglersArtOfFishing
             }
             else
             {
-                float followRate = sim.Behaviour == FishBehaviour.Dash ? 20f : 12f;
+                float followRate = sim.Behaviour == FishBehaviour.Dash || sim.Behaviour == FishBehaviour.Run ? 20f : 12f;
                 currentFishPos.X += (targetX - currentFishPos.X) * (1f - MathF.Exp(-followRate * dt));
                 currentFishPos.Y = targetY;
                 currentFishPos.Z += (targetZ - currentFishPos.Z) * (1f - MathF.Exp(-followRate * dt));
@@ -591,8 +626,10 @@ namespace AnglersArtOfFishing
                 ? (float)Math.Atan2(moveDx, moveDz)
                 : (float)Math.Atan2(fwdX, fwdZ);
 
-            float tiltPitch = (float)(0.20f + 0.30f * sim.Tension);
-            float tiltRoll = (float)(MathF.Sin(swimPhase) * 0.22f);
+            float tiltPitch = sim.Airborne && !showFish ? -0.9f + 1.8f * sim.AirProgress   // nose up on the way out, nose down on re-entry
+                            : (float)(0.20f + 0.30f * sim.Tension);
+            if (showFish) UpdateFishModel(dt, fx, fz, swimYaw, rise);
+            float tiltRoll = MathF.Sin(swimPhase) * (sim.Behaviour == FishBehaviour.Shake ? 0.6f : 0.22f);
 
             // Make the vanilla bobber entity and the attached rope follow the foaming fish in world
             if (bobberEntityId != 0)
@@ -630,9 +667,17 @@ namespace AnglersArtOfFishing
                 }
             }
 
+            // Big splash as a jumping fish leaves and re-enters the water
+            if (sim.Airborne != wasAirborne)
+            {
+                wasAirborne = sim.Airborne;
+                SpawnJumpSplash(fx, baseBobber.Y, fz, reentry: !sim.Airborne);
+            }
+            bool surfaceTrail = !sim.Airborne && sim.Behaviour != FishBehaviour.Dive;
+
             // 1. Water Wake & Expanding Surface Foam (continuous trail behind moving fish)
             rippleTimer += dt;
-            if (rippleTimer >= 0.045f)
+            if (surfaceTrail && rippleTimer >= 0.045f)
             {
                 rippleTimer = 0f;
                 var foam = new SimpleParticleProperties(
@@ -652,7 +697,7 @@ namespace AnglersArtOfFishing
 
             // 2. Sub-surface Fish Silhouette (dark aquatic shadow following fish body)
             shadowTimer += dt;
-            if (shadowTimer >= 0.08f)
+            if (surfaceTrail && shadowTimer >= 0.08f)
             {
                 shadowTimer = 0f;
                 var shadow = new SimpleParticleProperties(
@@ -674,12 +719,15 @@ namespace AnglersArtOfFishing
             float splashInterval = sim.Behaviour switch
             {
                 FishBehaviour.Dash => 0.05f,
+                FishBehaviour.Shake => 0.06f,
+                FishBehaviour.Run => 0.06f,
                 FishBehaviour.Windup => 0.07f,
                 FishBehaviour.Swim => 0.11f,
+                FishBehaviour.Dive => 0.25f,
                 _ => 0.18f
             };
 
-            if (splashTimer >= splashInterval)
+            if (!sim.Airborne && splashTimer >= splashInterval)
             {
                 splashTimer = 0f;
 
@@ -693,6 +741,21 @@ namespace AnglersArtOfFishing
                         minCount = 4f; maxCount = 8f;
                         minUp = 1.8f; maxUp = 3.3f;
                         horizSpread = 1.1f;
+                        break;
+                    case FishBehaviour.Run:
+                        minCount = 3f; maxCount = 6f;
+                        minUp = 1.2f; maxUp = 2.4f;
+                        horizSpread = 1.0f;
+                        break;
+                    case FishBehaviour.Shake:
+                        minCount = 2f; maxCount = 4f;
+                        minUp = 1.4f; maxUp = 2.6f;
+                        horizSpread = 0.5f;
+                        break;
+                    case FishBehaviour.Dive:
+                        minCount = 1f; maxCount = 1f;
+                        minUp = 0.3f; maxUp = 0.7f;
+                        horizSpread = 0.2f;
                         break;
                     case FishBehaviour.Windup:
                         minCount = 2f; maxCount = 4f;
@@ -725,7 +788,7 @@ namespace AnglersArtOfFishing
                 capi.World.SpawnParticles(drops);
 
                 // Bubbles churn underwater during active bursts
-                if (sim.Behaviour == FishBehaviour.Dash || sim.Behaviour == FishBehaviour.Windup)
+                if (sim.Behaviour == FishBehaviour.Dash || sim.Behaviour == FishBehaviour.Windup || sim.Behaviour == FishBehaviour.Dive)
                 {
                     var bubbles = new SimpleParticleProperties(
                         1f, 3f,
@@ -746,21 +809,74 @@ namespace AnglersArtOfFishing
             float soundInterval = sim.Behaviour switch
             {
                 FishBehaviour.Dash => 0.42f,
+                FishBehaviour.Shake => 0.35f,
+                FishBehaviour.Run => 0.5f,
                 FishBehaviour.Swim => 0.85f,
+                FishBehaviour.Dive => 1.6f,
                 _ => 1.4f
             };
 
-            if (soundTimer >= soundInterval)
+            if (!sim.Airborne && soundTimer >= soundInterval)
             {
                 soundTimer = 0f;
                 float vol = sim.Behaviour switch
                 {
                     FishBehaviour.Dash => 0.65f,
+                    FishBehaviour.Run => 0.5f,
+                    FishBehaviour.Shake => 0.4f,
                     FishBehaviour.Swim => 0.32f,
+                    FishBehaviour.Dive => 0.12f,
                     _ => 0.18f
                 };
                 capi.World.PlaySoundAt(new AssetLocation("game:sounds/player/swim"), fx, fy, fz, null, true, 20f, vol);
             }
+        }
+
+        void UpdateFishModel(float dt, double fx, double fz, float swimYaw, double rise)
+        {
+            // How far under the surface the fish swims: deep on dives, right at the top when spent or at the bank
+            double depth = sim.Behaviour switch
+            {
+                FishBehaviour.Dive => 1.1,
+                FishBehaviour.Tired => 0.05,
+                FishBehaviour.Shake => 0.12,
+                FishBehaviour.Dash or FishBehaviour.Run => 0.35,
+                _ => 0.25
+            };
+            if (sim.Distance < 0.15f) depth = Math.Min(depth, 0.06);
+            fishDepth += (float)(depth - fishDepth) * (1f - MathF.Exp(-3f * dt));
+
+            fishModel.Pos.Set(fx, baseBobber.Y - fishDepth + rise, fz);
+            fishModel.Yaw = swimYaw;
+            fishModel.Pitch = sim.Airborne ? 0.9f - 1.8f * sim.AirProgress      // nose up leaving the water, nose down re-entering
+                            : sim.Behaviour == FishBehaviour.Dive ? -0.5f : 0f;
+            fishModel.Roll = sim.Behaviour switch
+            {
+                FishBehaviour.Tired => 1.3f,                                   // rolls onto its side when spent
+                FishBehaviour.Shake => MathF.Sin(swimPhase) * 0.5f,
+                _ => MathF.Sin(swimPhase * 0.5f) * 0.12f
+            };
+        }
+
+        void SpawnJumpSplash(double x, double surfaceY, double z, bool reentry)
+        {
+            float size = 0.6f + 0.6f * sim.Power;
+            var splash = new SimpleParticleProperties(
+                12f * size, 20f * size,
+                ColorUtil.ToRgba(220, 238, 255, 255),
+                new Vec3d(x - 0.25 * size, surfaceY + 0.02, z - 0.25 * size),
+                new Vec3d(x + 0.25 * size, surfaceY + 0.12, z + 0.25 * size),
+                new Vec3f(-1.0f, reentry ? 2.6f : 1.8f, -1.0f),
+                new Vec3f(1.0f, reentry ? 4.6f : 3.4f, 1.0f),
+                0.7f, 1.0f, 0.10f, 0.26f, EnumParticleModel.Quad
+            );
+            splash.ShouldDieInLiquid = true;
+            capi.World.SpawnParticles(splash);
+
+            string sound = sim.Power >= 0.6f ? "game:sounds/environment/largesplash1"
+                         : sim.Power >= 0.3f ? "game:sounds/environment/mediumsplash"
+                         : "game:sounds/environment/smallsplash";
+            capi.World.PlaySoundAt(new AssetLocation(sound), x, surfaceY, z, null, true, 24f, reentry ? 0.9f : 0.6f);
         }
 
         void SpawnOutcomeEffects(FightOutcome outcome)
@@ -820,6 +936,8 @@ namespace AnglersArtOfFishing
         {
             capi.Event.UnregisterRenderer(motionRenderer, EnumRenderStage.Before);
             capi.Event.UnregisterRenderer(this, EnumRenderStage.Ortho);
+            capi.Event.UnregisterRenderer(fishModel, EnumRenderStage.Opaque);
+            fishModel.Dispose();
             ResetFishVisuals();
             ClearTextCache();
             white?.Dispose();

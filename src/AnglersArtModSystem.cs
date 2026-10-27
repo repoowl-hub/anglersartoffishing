@@ -23,6 +23,12 @@ namespace AnglersArtOfFishing
             if (api.Side == EnumAppSide.Server) SpeciesRegistry.Load(api);
         }
 
+        public override void AssetsFinalize(ICoreAPI api)
+        {
+            base.AssetsFinalize(api);
+            if (api.Side == EnumAppSide.Server) FishingGear.ApplyLureTags(api);
+        }
+
         public override void StartServerSide(ICoreServerAPI api)
         {
             base.StartServerSide(api);

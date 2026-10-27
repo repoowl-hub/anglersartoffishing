@@ -1,5 +1,23 @@
 {
   "item-bait-spinner": "Spinner Lure",
+  "item-bait-popper": "Popper Lure",
+  "item-bait-jig": "Lead Jig",
+  "item-bait-spoon": "Spoon Lure",
+  "itemdesc-bait-spinner": "A flashing blade that runners chase down: carp, salmon, mackerel and tuna. Rarely lost when a fish is landed.",
+  "itemdesc-bait-popper": "A topwater lure that splashes across the surface. Draws strikes from jumpers: trout, bass, mahi-mahi and arapaima.",
+  "itemdesc-bait-jig": "A heavy jig bounced along the bottom. Bulldogs that hug the bottom take it: catfish, sheatfish, grouper and sturgeon.",
+  "itemdesc-bait-spoon": "A wobbling metal spoon that triggers ambush strikes from pike, pickerel, barracuda and piranha.",
+
+  "item-fishingline-braided": "Braided Fishing Line",
+  "item-fishingline-waxed": "Waxed Fishing Line",
+  "itemdesc-fishingline-braided": "Craft onto a fishing pole. The line holds under strain a little longer before snapping.",
+  "itemdesc-fishingline-waxed": "Craft onto a fishing pole. Waxed braid holds under strain much longer before snapping.",
+  "item-fishingreel-copper": "Copper Reel",
+  "item-fishingreel-iron": "Iron Reel",
+  "itemdesc-fishingreel-copper": "Craft onto a fishing pole to wind line in 10% faster.",
+  "itemdesc-fishingreel-iron": "Craft onto a fishing pole to wind line in 20% faster.",
+  "pole-line": "Line: {0}",
+  "pole-reel": "Reel: {0}",
 
   "fishing-snapped": "The line snapped!",
   "fishing-escaped": "The fish got away...",

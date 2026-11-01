@@ -7,7 +7,6 @@
   "itemdesc-bait-popper": "A topwater lure that splashes across the surface. Draws strikes from jumpers: trout, bass, mahi-mahi and arapaima.",
   "itemdesc-bait-jig": "A heavy jig bounced along the bottom. Bulldogs that hug the bottom take it: catfish, sheatfish, grouper and sturgeon.",
   "itemdesc-bait-spoon": "A wobbling metal spoon that triggers ambush strikes from pike, pickerel, barracuda and piranha.",
-
   "item-fishingline-braided": "Braided Fishing Line",
   "item-fishingline-waxed": "Waxed Fishing Line",
   "itemdesc-fishingline-braided": "Craft onto a fishing pole. The line holds under strain a little longer before snapping.",
@@ -18,13 +17,15 @@
   "itemdesc-fishingreel-iron": "Craft onto a fishing pole to wind line in 20% faster.",
   "pole-line": "Line: {0}",
   "pole-reel": "Reel: {0}",
-
   "fishing-snapped": "The line snapped!",
   "fishing-escaped": "The fish got away...",
   "vanilla-snag": "Submerged Catch",
   "vanilla-fish": "Wild Fish",
   "vanilla-caught": "Landed the catch!",
-
   "hud-slack": "Line is slack - reel!",
-  "hud-controls": "Hold [RMB] to Reel  •  Release on surges"
+  "hud-controls": "Hold [RMB] to Reel  •  Release on surges",
+  "item-fishingpole-light": "Light Fishing Rod",
+  "item-fishingpole-steel": "Steel Fishing Rod",
+  "itemdesc-fishingpole-light": "A slender birch rod. Every tug comes straight down the line, so even a small fish needs a soft touch, and big fish will snap it easily.",
+  "itemdesc-fishingpole-steel": "A tubular steel rod with a leather grip, like those of the early 20th century. Strong and hard-wearing, it soaks up a big fish's runs better than any wooden pole."
 }

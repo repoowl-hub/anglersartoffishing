@@ -1,0 +1,76 @@
+{
+  "code": "fishingpole",
+  "class": "ItemFishingPole",
+  "heldRightReadyAnimation": null,
+  "heldTpUseAnimation": null,
+  "behaviors": [
+    {
+      "name": "GroundStorable",
+      "properties": {
+        "layout": "WallHalves",
+        "wallOffY": 3,
+        "ctrlKey": true,
+        "selectionBox": { "x1": 0, "y1": 0, "z1": 0, "x2": 1, "y2": 0.1, "z2": 1 },
+        "collisionBox": { "x1": 0, "y1": 0, "z1": 0, "x2": 0, "y2": 0, "z2": 0 }
+      }
+    }
+  ],
+  "variantgroups": [
+    { "code": "material", "states": [ "light", "steel" ] }
+  ],
+  "shape": { "base": "anglersartoffishing:item/rod-{material}" },
+  "heldTpHitAnimation": "breaktool",
+  "attributes": {
+    "aimAnimation": "fishingpole-throw",
+    "idleAnimation": "fishingpole-idle",
+    "ropelessShapeByType": {
+      "*-light": { "base": "anglersartoffishing:item/rod-light-ropeless" },
+      "*-steel": { "base": "anglersartoffishing:item/rod-steel-ropeless" }
+    },
+    "rodStatsByType": {
+      "*-light": { "dragDampening": -1, "reelSpeed": 0.95, "snapForgiveness": 0.35, "tensionScale": 1.35 },
+      "*-steel": { "dragDampening": 2, "reelSpeed": 1.0, "snapForgiveness": 0.7, "tensionScale": 1.05 }
+    },
+    "heldItemPitchFollow": 0.9,
+    "rackable": true,
+    "toolrackTransform": {
+      "translation": { "x": -1.2, "y": 0.5, "z": 0 },
+      "origin": { "x": 0.5, "y": 0, "z": 0.5 },
+      "scale": 1.5
+    },
+    "groundStorageTransform": {
+      "translation": { "x": 0.5, "y": 0.02, "z": -0.505 },
+      "rotation": { "x": -162, "y": 88, "z": -87 },
+      "origin": { "x": 0, "y": 0, "z": 0.5 },
+      "scale": 0.88
+    },
+    "handbook": {
+      "groupBy": [ "fishingpole-*" ]
+    }
+  },
+  "durabilitybytype": {
+    "*-light": 220,
+    "*-steel": 1200
+  },
+  "combustiblePropsByType": {
+    "*-light": { "burnTemperature": 600, "burnDuration": 10 }
+  },
+  "creativeinventory": { "general": [ "*" ], "items": [ "*" ], "tools": [ "*" ] },
+  "guiTransform": {
+    "translation": { "x": 0, "y": 0, "z": 0 },
+    "rotation": { "x": -50, "y": -41, "z": 44 },
+    "origin": { "x": 0.55, "y": -0.39, "z": 0.77 },
+    "scale": 1.15
+  },
+  "groundTransform": {
+    "translation": { "x": 0, "y": 0.37, "z": 0 },
+    "rotation": { "x": 0, "y": 0, "z": 0 },
+    "origin": { "x": 1.5, "y": 0.5, "z": 0.5 },
+    "scale": 3.6
+  },
+  "tpHandTransform": {
+    "translation": { "x": -0.9, "y": -0.55, "z": -0.12 },
+    "rotation": { "x": 90, "y": 1, "z": 0 },
+    "scale": 0.85
+  }
+}

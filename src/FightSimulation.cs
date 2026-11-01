@@ -48,7 +48,7 @@ namespace AnglersArtOfFishing
         public float Aggression = 0.5f;
         /// <summary>Which move set the fish uses.</summary>
         public FightStyle Style = FightStyle.Headshaker;
-        /// <summary>Pole tier bonus that dampens the fish's pull (0 = wood, 1 = bamboo).</summary>
+        /// <summary>How much the rod dampens the fish's pull: -1 light rod (pull hits harder), 0 wood, 1 bamboo, 2 steel.</summary>
         public int RodMargin = 0;
         /// <summary>Reel speed multiplier of the rod.</summary>
         public float ReelSpeed = 1f;
@@ -58,6 +58,9 @@ namespace AnglersArtOfFishing
         public float StartDistance = 0.85f;
         /// <summary>Seconds of slack line before the fish throws the hook. Lower for lightly set hooks (stale bait).</summary>
         public float SlackEscapeSeconds = 6.0f;
+        /// <summary>How sharply the rod passes load onto the line: &gt;1 light rods (tension climbs fast, even small fish
+        /// can redline it), &lt;1 stiff metal rods.</summary>
+        public float TensionScale = 1f;
     }
 
     /// <summary>
@@ -407,8 +410,8 @@ namespace AnglersArtOfFishing
 
         float PullLoad()
         {
-            // Rod margin reduces stress: sturdier rods dampen the fish's pull force
-            float rodReduction = 1f / (0.80f + 0.20f * (1 + Math.Max(0, p.RodMargin)));
+            // Rod margin reduces stress: sturdier rods dampen the fish's pull force, a light rod passes more of it on
+            float rodReduction = 1f / (0.80f + 0.20f * (1 + Math.Max(-1, p.RodMargin)));
             float fishLoad = PullNow * (0.35f + 0.65f * Math.Clamp(p.Power, 0f, 1f));
             return fishLoad * rodReduction;
         }
@@ -421,7 +424,7 @@ namespace AnglersArtOfFishing
             // When reeling: line winches tight against pull + reel gear tension.
             // When not reeling: reel drag lets line slip, dropping tension safely.
             float reelLoad = Reeling ? (ReelTension * p.ReelSpeed * tired) : 0f;
-            float target = BaseTension + pull * (Reeling ? 0.95f : 0.40f) + reelLoad;
+            float target = BaseTension + (pull * (Reeling ? 0.95f : 0.40f) + reelLoad) * p.TensionScale;
 
             // Very responsive tension rise on reeling/surges (k = 18f), fast drop on reel release (k = 14f)
             float k = target > Tension ? 18f : 14f;

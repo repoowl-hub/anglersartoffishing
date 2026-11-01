@@ -316,11 +316,13 @@ namespace AnglersArtOfFishing
                 style = SpeciesRegistry.ResolveStyle(data, data.Power);
             }
 
-            // ---- fixed drag per pole tier
+            // ---- rod: its "rodStats" attribute, or the vanilla wood/bamboo defaults
             bool bamboo = slot.Itemstack.Collectible.Variant["material"] == "bamboo";
-            int rodMargin = bamboo ? 1 : 0;
-            float reelSpeed = bamboo ? 1.1f : 1.0f;
-            float forgiveness = bamboo ? 0.6f : 0.5f;
+            var rodStats = slot.Itemstack.Collectible.Attributes?["rodStats"];
+            int rodMargin = rodStats?["dragDampening"].AsInt(bamboo ? 1 : 0) ?? (bamboo ? 1 : 0);
+            float reelSpeed = rodStats?["reelSpeed"].AsFloat(bamboo ? 1.1f : 1.0f) ?? (bamboo ? 1.1f : 1.0f);
+            float forgiveness = rodStats?["snapForgiveness"].AsFloat(bamboo ? 0.6f : 0.5f) ?? (bamboo ? 0.6f : 0.5f);
+            float tensionScale = rodStats?["tensionScale"].AsFloat(1f) ?? 1f;
 
             // ---- crafted-on line and reel
             forgiveness += FishingGear.SnapBonus(slot.Itemstack, sapi.World);
@@ -358,6 +360,7 @@ namespace AnglersArtOfFishing
                 ReelSpeed = reelSpeed,
                 Forgiveness = forgiveness,
                 SlackEscapeSeconds = slackEscape,
+                TensionScale = tensionScale,
                 StartDistance = Math.Clamp((float)player.Entity.Pos.XYZ.DistanceTo(bp.XYZ) / CastMaxDist * 0.6f + 0.55f, 0.6f, 1f),
                 BobberX = bp.X, BobberY = bp.Y, BobberZ = bp.Z,
                 BobberEntityId = bobber.EntityId,

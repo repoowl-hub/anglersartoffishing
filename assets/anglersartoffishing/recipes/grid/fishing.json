@@ -235,5 +235,229 @@
         "bamboo"
       ]
     }
+  },
+  {
+    "name": "aafpole-light",
+    "ingredientPattern": "SS,TT",
+    "width": 2,
+    "height": 2,
+    "ingredients": {
+      "S": {
+        "type": "item",
+        "code": "game:stick"
+      },
+      "T": {
+        "type": "item",
+        "code": "game:flaxtwine"
+      }
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:fishingpole-light"
+    }
+  },
+  {
+    "name": "aafpole-steel",
+    "ingredientPattern": "RRL,TTT",
+    "width": 3,
+    "height": 2,
+    "ingredients": {
+      "R": {
+        "type": "item",
+        "code": "game:rod-steel"
+      },
+      "L": {
+        "type": "item",
+        "code": "game:leather-normal-plain"
+      },
+      "T": {
+        "type": "item",
+        "code": "game:flaxtwine"
+      }
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:fishingpole-steel"
+    }
+  },
+  {
+    "name": "aafpole-attach-bait",
+    "recipeGroup": 2,
+    "ingredientPattern": "P,B",
+    "shapeless": true,
+    "copyAttributesFrom": "P",
+    "averageDurability": false,
+    "width": 1,
+    "height": 2,
+    "ingredients": {
+      "P": {
+        "type": "item",
+        "code": "anglersartoffishing:fishingpole-{material}"
+      },
+      "B": {
+        "type": "item",
+        "code": "game:fishingbait-*"
+      }
+    },
+    "allowedVariants": {
+      "material": [
+        "light",
+        "steel"
+      ]
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:fishingpole-{material}"
+    }
+  },
+  {
+    "name": "aafpole-attach-earthworm",
+    "recipeGroup": 2,
+    "ingredientPattern": "P,B",
+    "shapeless": true,
+    "copyAttributesFrom": "P",
+    "averageDurability": false,
+    "width": 1,
+    "height": 2,
+    "ingredients": {
+      "P": {
+        "type": "item",
+        "code": "anglersartoffishing:fishingpole-{material}"
+      },
+      "B": {
+        "type": "item",
+        "code": "game:creature-earthworm"
+      }
+    },
+    "allowedVariants": {
+      "material": [
+        "light",
+        "steel"
+      ]
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:fishingpole-{material}"
+    }
+  },
+  {
+    "name": "aafpole-attach-earthworm-dead",
+    "recipeGroup": 2,
+    "ingredientPattern": "P,B",
+    "shapeless": true,
+    "copyAttributesFrom": "P",
+    "averageDurability": false,
+    "width": 1,
+    "height": 2,
+    "ingredients": {
+      "P": {
+        "type": "item",
+        "code": "anglersartoffishing:fishingpole-{material}"
+      },
+      "B": {
+        "type": "item",
+        "code": "game:creature-earthworm-dead"
+      }
+    },
+    "allowedVariants": {
+      "material": [
+        "light",
+        "steel"
+      ]
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:fishingpole-{material}"
+    }
+  },
+  {
+    "name": "aafpole-attach-lure",
+    "recipeGroup": 2,
+    "ingredientPattern": "P,B",
+    "shapeless": true,
+    "copyAttributesFrom": "P",
+    "averageDurability": false,
+    "width": 1,
+    "height": 2,
+    "ingredients": {
+      "P": {
+        "type": "item",
+        "code": "anglersartoffishing:fishingpole-{material}"
+      },
+      "B": {
+        "type": "item",
+        "code": "anglersartoffishing:bait-*"
+      }
+    },
+    "allowedVariants": {
+      "material": [
+        "light",
+        "steel"
+      ]
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:fishingpole-{material}"
+    }
+  },
+  {
+    "name": "aafpole-attach-line",
+    "recipeGroup": 3,
+    "ingredientPattern": "P,B",
+    "shapeless": true,
+    "copyAttributesFrom": "P",
+    "averageDurability": false,
+    "width": 1,
+    "height": 2,
+    "ingredients": {
+      "P": {
+        "type": "item",
+        "code": "anglersartoffishing:fishingpole-{material}"
+      },
+      "B": {
+        "type": "item",
+        "code": "anglersartoffishing:fishingline-*"
+      }
+    },
+    "allowedVariants": {
+      "material": [
+        "light",
+        "steel"
+      ]
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:fishingpole-{material}"
+    }
+  },
+  {
+    "name": "aafpole-attach-reel",
+    "recipeGroup": 3,
+    "ingredientPattern": "P,B",
+    "shapeless": true,
+    "copyAttributesFrom": "P",
+    "averageDurability": false,
+    "width": 1,
+    "height": 2,
+    "ingredients": {
+      "P": {
+        "type": "item",
+        "code": "anglersartoffishing:fishingpole-{material}"
+      },
+      "B": {
+        "type": "item",
+        "code": "anglersartoffishing:fishingreel-*"
+      }
+    },
+    "allowedVariants": {
+      "material": [
+        "light",
+        "steel"
+      ]
+    },
+    "output": {
+      "type": "item",
+      "code": "anglersartoffishing:fishingpole-{material}"
+    }
   }
 ]

@@ -46,6 +46,8 @@ namespace AnglersArtOfFishing
             if (tagsByStyle.Count == 0) return;
 
             int patched = 0;
+            var examples = new Dictionary<string, string>();
+            var withoutVanillaTags = new List<string>();
             foreach (var type in api.World.EntityTypes)
             {
                 // Any fish creature, vanilla or modded (vanilla codes start with "fish-", modded ones need not)
@@ -55,16 +57,28 @@ namespace AnglersArtOfFishing
                 var species = SpeciesRegistry.ResolveFor(type);
                 if (!tagsByStyle.TryGetValue(SpeciesRegistry.ResolveStyle(species, species.Power), out var tags)) continue;
 
-                if (attrObj["baitTags"] is not JArray baitTags) attrObj["baitTags"] = baitTags = new JArray();
+                // Vanilla's loader has already resolved baitTagsByType into this fish's own baitTags list; append to it
+                if (attrObj["baitTags"] is not JArray baitTags)
+                {
+                    attrObj["baitTags"] = baitTags = new JArray();
+                    withoutVanillaTags.Add(type.Code.ToString());
+                }
                 foreach (var tag in tags)
                 {
                     bool present = false;
                     foreach (var t in baitTags) if ((string)t == tag) { present = true; break; }
                     if (!present) baitTags.Add(tag);
+                    if (!examples.ContainsKey(tag)) examples[tag] = type.Code + ": " + string.Join(", ", baitTags);
                 }
                 patched++;
             }
             api.Logger.Notification("[AnglersArtOfFishing] Added lure bait tags to {0} fish entity types", patched);
+            // Proof in the log that the lure tag sits alongside the fish's vanilla bait tags (what the fish picker reads)
+            foreach (var kv in examples) api.Logger.Notification("[AnglersArtOfFishing]   {0} e.g. {1}", kv.Key, kv.Value);
+            if (withoutVanillaTags.Count > 0)
+            {
+                api.Logger.Warning("[AnglersArtOfFishing] {0} fish had no resolved baitTags (lure only): {1}", withoutVanillaTags.Count, string.Join(", ", withoutVanillaTags));
+            }
         }
 
         // ------------------------------------------------------------------ pole upgrades

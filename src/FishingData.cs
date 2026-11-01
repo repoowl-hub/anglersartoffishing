@@ -155,6 +155,7 @@ namespace AnglersArtOfFishing
         public float Forgiveness;
         public float StartDistance;
         public float SlackEscapeSeconds;
+        public float TensionScale;
 
         /// <summary>Lang-key or plain message to display as a toast (any phase).</summary>
         public string Message;

@@ -130,7 +130,8 @@ namespace AnglersArtOfFishing
                         ReelSpeed = p.ReelSpeed,
                         Forgiveness = p.Forgiveness,
                         StartDistance = p.StartDistance,
-                        SlackEscapeSeconds = p.SlackEscapeSeconds
+                        SlackEscapeSeconds = p.SlackEscapeSeconds,
+                        TensionScale = p.TensionScale > 0 ? p.TensionScale : 1f
                     });
                     sim.BehaviourChanged += _ => flash = 0.6f;
                     reported = FightOutcome.None;

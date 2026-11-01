@@ -37,6 +37,7 @@ namespace AnglersArtOfFishing
 
         readonly BobberMotionRenderer motionRenderer;
         readonly FishModelRenderer fishModel;
+        readonly LureBobberRenderer lureRenderer;
         float fishDepth = 0.25f;
 
         // In-world water animation
@@ -83,6 +84,8 @@ namespace AnglersArtOfFishing
             api.Event.RegisterRenderer(this, EnumRenderStage.Ortho, "anglersartoffishing-hud");
             fishModel = new FishModelRenderer(api);
             api.Event.RegisterRenderer(fishModel, EnumRenderStage.Opaque, "anglersartoffishing-fish");
+            lureRenderer = new LureBobberRenderer(api);
+            api.Event.RegisterRenderer(lureRenderer, EnumRenderStage.Opaque, "anglersartoffishing-lure");
         }
 
         // ------------------------------------------------------------------ network / input
@@ -629,6 +632,8 @@ namespace AnglersArtOfFishing
             float tiltPitch = sim.Airborne && !showFish ? -0.9f + 1.8f * sim.AirProgress   // nose up on the way out, nose down on re-entry
                             : (float)(0.20f + 0.30f * sim.Tension);
             if (showFish) UpdateFishModel(dt, fx, fz, swimYaw, rise);
+            // A lure has no float: it (and the end of the line) sits in the fish's mouth instead of on the surface
+            double lineY = showFish && LureBobberRenderer.IsLureBobber(bobberEntityId) ? fishModel.Pos.Y : fy;
             float tiltRoll = MathF.Sin(swimPhase) * (sim.Behaviour == FishBehaviour.Shake ? 0.6f : 0.22f);
 
             // Make the vanilla bobber entity and the attached rope follow the foaming fish in world
@@ -637,7 +642,7 @@ namespace AnglersArtOfFishing
                 var bobber = capi.World.GetEntityById(bobberEntityId);
                 if (bobber != null && bobber.Alive)
                 {
-                    bobber.Pos.SetPos(fx, fy, fz);
+                    bobber.Pos.SetPos(fx, lineY, fz);
                     bobber.Pos.Yaw = swimYaw;
                     bobber.Pos.Pitch = tiltPitch;
                     bobber.Pos.Roll = tiltRoll;
@@ -645,8 +650,8 @@ namespace AnglersArtOfFishing
                     var interp = bobber.GetBehavior<EntityBehaviorInterpolatePosition>();
                     if (interp != null)
                     {
-                        interp.pN.x = fx; interp.pN.y = fy; interp.pN.z = fz;
-                        interp.pL.x = fx; interp.pL.y = fy; interp.pL.z = fz;
+                        interp.pN.x = fx; interp.pN.y = lineY; interp.pN.z = fz;
+                        interp.pL.x = fx; interp.pL.y = lineY; interp.pL.z = fz;
                         interp.positionQueue.Clear();
                         interp.queueCount = 0;
                         interp.currentYaw = swimYaw;
@@ -661,7 +666,7 @@ namespace AnglersArtOfFishing
                     var rope = cm?.GetClothSystemAttachedToEntity(bobberEntityId);
                     if (rope != null)
                     {
-                        rope.LastPoint.Pos.Set(fx, fy, fz);
+                        rope.LastPoint.Pos.Set(fx, lineY, fz);
                         rope.CanRip = false;
                     }
                 }
@@ -938,6 +943,8 @@ namespace AnglersArtOfFishing
             capi.Event.UnregisterRenderer(this, EnumRenderStage.Ortho);
             capi.Event.UnregisterRenderer(fishModel, EnumRenderStage.Opaque);
             fishModel.Dispose();
+            capi.Event.UnregisterRenderer(lureRenderer, EnumRenderStage.Opaque);
+            lureRenderer.Dispose();
             ResetFishVisuals();
             ClearTextCache();
             white?.Dispose();

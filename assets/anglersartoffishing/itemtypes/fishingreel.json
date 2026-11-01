@@ -1,6 +1,15 @@
 {
   "code": "fishingreel",
   "maxstacksize": 8,
+  "behaviors": [
+    {
+      "name": "GroundStorable",
+      "properties": {
+        "layout": "Quadrants",
+        "collisionBox": { "x1": 0, "y1": 0, "z1": 0, "x2": 1, "y2": 0.5, "z2": 1 }
+      }
+    }
+  ],
   "variantgroups": [
     { "code": "metal", "states": [ "copper", "iron" ] }
   ],
@@ -29,8 +38,8 @@
     "scale": 1.4
   },
   "tpHandTransform": {
-    "translation": { "x": -0.8, "y": -0.25, "z": -0.6 },
-    "rotation": { "x": 0, "y": 0, "z": 0 },
+    "translation": { "x": -1, "y": -0.5, "z": -0.6 },
+    "rotation": { "x": 93, "y": 0, "z": 0 },
     "origin": { "x": 0.5, "y": 0.25, "z": 0.5 },
     "scale": 0.55
   },

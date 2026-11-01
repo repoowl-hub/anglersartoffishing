@@ -119,8 +119,13 @@ namespace AnglersArtOfFishing
 
         // ------------------------------------------------------------------ patches
 
-        public static bool Prefix_SkipHiddenFish(EntityShapeRenderer __instance) =>
-            HiddenFishEntityId == 0 || __instance.entity?.EntityId != HiddenFishEntityId;
+        /// <summary>Skips drawing the hidden real fish and any bobber that is drawn as a lure instead.</summary>
+        public static bool Prefix_SkipHiddenFish(EntityShapeRenderer __instance)
+        {
+            if (HiddenFishEntityId == 0 && LureBobberRenderer.HiddenBobbers.Count == 0) return true;
+            long id = __instance.entity?.EntityId ?? 0;
+            return id != HiddenFishEntityId && !LureBobberRenderer.HiddenBobbers.Contains(id);
+        }
 
         public static bool Prefix_GetRandomFish(EntityBobber __instance, ref float abundanceValue, ref EntityProperties __result)
         {
